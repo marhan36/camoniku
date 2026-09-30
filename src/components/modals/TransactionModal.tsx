@@ -3,10 +3,10 @@ import { Transaction } from '@/types'
 import { useNotebookStore } from '@/store/useNotebookStore'
 import { useMetadataStore } from '@/store/useMetadataStore'
 import { useTransactionStore } from '@/store/useTransactionStore'
-import { formatCurrency, parseCurrencyInput } from '@/utils/currency'
+import { formatCurrency, parseCurrencyInput, getCurrencySymbol } from '@/utils/currency'
 import { getTodayISODate } from '@/utils/date'
 import { AddMetadataModal } from './AddMetadataModal'
-import { X, Calendar, DollarSign, Plus, Loader2 } from 'lucide-react'
+import { X, Calendar, Plus, Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 interface TransactionModalProps {
@@ -28,6 +28,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const activeNotebook = getActiveNotebook()
   const notebookId = activeNotebook?.id || ''
   const currency = activeNotebook?.currency || 'IDR'
+  const currencySymbol = getCurrencySymbol(currency)
 
   // Form states
   const [date, setDate] = useState(getTodayISODate())
@@ -154,9 +155,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
                 {t('transactions.amount')} *
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <DollarSign className="w-4 h-4" />
+              <div className="relative flex items-center">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500 font-bold text-xs select-none">
+                  {currencySymbol}
                 </div>
                 <input
                   type="text"
@@ -164,7 +165,15 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   placeholder="0"
                   value={amountRaw}
                   onChange={handleAmountChange}
-                  className={`w-full pl-9 pr-4 py-2.5 rounded-xl border text-base font-semibold focus:outline-none focus:ring-2 transition-all ${
+                  style={{
+                    paddingLeft:
+                      currencySymbol.length > 2
+                        ? '3.5rem'
+                        : currencySymbol.length > 1
+                        ? '2.75rem'
+                        : '2rem',
+                  }}
+                  className={`w-full pr-4 py-2.5 rounded-xl border text-base font-semibold focus:outline-none focus:ring-2 transition-all ${
                     errors.amount
                       ? 'border-rose-400 focus:ring-rose-200'
                       : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-100'

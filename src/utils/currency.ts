@@ -36,3 +36,10 @@ export function parseCurrencyInput(value: string): number {
   const parsed = parseFloat(clean)
   return isNaN(parsed) ? 0 : parsed
 }
+
+export function getCurrencySymbol(currencyCode: string = 'IDR'): string {
+  const normalizedCode = (currencyCode || 'IDR').toUpperCase()
+  const found = SUPPORTED_CURRENCIES.find((c) => c.code === normalizedCode)
+  return found?.symbol || normalizedCode
+}
+
