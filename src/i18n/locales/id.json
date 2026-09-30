@@ -17,7 +17,8 @@
     "online": "Online",
     "offline": "Offline",
     "syncing": "Menyinkronkan...",
-    "synced": "Tersinkron"
+    "synced": "Tersinkron",
+    "local_only": "Penyimpanan Lokal"
   },
   "auth": {
     "welcome_title": "Kendali Penuh Keuangan Anda",

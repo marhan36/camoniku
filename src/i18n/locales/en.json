@@ -17,7 +17,8 @@
     "online": "Online",
     "offline": "Offline",
     "syncing": "Syncing...",
-    "synced": "Synced"
+    "synced": "Synced",
+    "local_only": "Local Storage"
   },
   "auth": {
     "welcome_title": "Take Control of Your Expenses",

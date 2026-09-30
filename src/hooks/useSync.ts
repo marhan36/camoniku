@@ -19,9 +19,15 @@ export function useSync() {
   useEffect(() => {
     const handleOnline = () => {
       setOnline(true)
+      if (user?.is_anonymous) {
+        setSyncStatus('local_only')
+      } else {
+        setSyncStatus('synced')
+      }
     }
     const handleOffline = () => {
       setOnline(false)
+      setSyncStatus('offline')
     }
 
     window.addEventListener('online', handleOnline)
@@ -31,12 +37,12 @@ export function useSync() {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
     }
-  }, [setOnline])
+  }, [user, setOnline, setSyncStatus])
 
   // 2. Real-time Firebase Sync for authenticated (non-anonymous) users
   useEffect(() => {
     if (!user || user.is_anonymous) {
-      setSyncStatus('synced')
+      setSyncStatus('local_only')
       return
     }
 

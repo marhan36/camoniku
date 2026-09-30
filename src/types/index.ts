@@ -56,7 +56,7 @@ export interface UserSettings {
   dateFormat: 'YYYY-MM-DD' | 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'DD-MM-YYYY'
 }
 
-export type NetworkSyncStatus = 'online' | 'offline' | 'syncing' | 'synced' | 'error'
+export type NetworkSyncStatus = 'online' | 'offline' | 'syncing' | 'synced' | 'local_only' | 'error'
 
 export interface NotebookExportData {
   notebook: Notebook

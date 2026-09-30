@@ -12,11 +12,7 @@ export const useNetworkStore = create<NetworkState>((set) => ({
   isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
   syncStatus: typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'synced',
 
-  setOnline: (isOnline) =>
-    set({
-      isOnline,
-      syncStatus: isOnline ? 'synced' : 'offline',
-    }),
+  setOnline: (isOnline) => set({ isOnline }),
 
   setSyncStatus: (syncStatus) => set({ syncStatus }),
 }))
