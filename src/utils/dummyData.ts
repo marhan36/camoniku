@@ -77,8 +77,11 @@ export function generateDefaultData(user: User, lang: 'en' | 'id' = 'en'): {
   const catGroceries = categories[3]
   const catEntertainment = categories[4]
 
-  // Pre-filled dummy transactions for onboarding & charts
-  const transactions: Transaction[] = [
+  // In production builds, no dummy transactions are generated.
+  // In development mode, mock transactions are available for UI testing.
+  const transactions: Transaction[] = import.meta.env.PROD
+    ? []
+    : [
     {
       id: crypto.randomUUID(),
       notebook_id: notebookId,
