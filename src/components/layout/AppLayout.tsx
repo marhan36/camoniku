@@ -11,7 +11,7 @@ export const AppLayout: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans pb-20 md:pb-8">
       {/* Toast notifications */}
-      <Toaster position="top-right" richColors closeButton />
+      <Toaster position="top-right" richColors closeButton expand={true} visibleToasts={5} />
 
       {/* Navigation */}
       <Navbar />
