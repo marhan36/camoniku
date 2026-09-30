@@ -4,6 +4,7 @@ import { useNotebookStore } from '@/store/useNotebookStore'
 import { useTransactionStore } from '@/store/useTransactionStore'
 import { useMetadataStore } from '@/store/useMetadataStore'
 import { useSettingsStore } from '@/store/useSettingsStore'
+import { useAuthStore } from '@/store/useAuthStore'
 import { formatCurrency } from '@/utils/currency'
 import { formatDisplayDate } from '@/utils/date'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -49,6 +50,7 @@ export const DashboardPage: React.FC = () => {
   const navigate = useNavigate()
   const { getActiveNotebook } = useNotebookStore()
   const { transactions } = useTransactionStore()
+  const { user } = useAuthStore()
   const { classifications, categories } = useMetadataStore()
   const { dateFormat } = useSettingsStore()
 
@@ -111,7 +113,18 @@ export const DashboardPage: React.FC = () => {
       } else if (groupBy === 'classification') {
         key = classificationMap.get(tx.classification_id) || 'Unclassified'
       } else if (groupBy === 'user') {
-        key = tx.user_id?.length > 10 ? `${tx.user_id.slice(0, 8)}...` : tx.user_id || 'User'
+        if (
+          user &&
+          (tx.user_id === user.id ||
+            tx.user_id === 'guest' ||
+            (user.is_anonymous && tx.user_id?.startsWith('guest')))
+        ) {
+          key = user.name ? `${user.name} (You)` : 'You'
+        } else if (tx.user_id && tx.user_id.length > 15) {
+          key = `${tx.user_id.slice(0, 10)}...`
+        } else {
+          key = tx.user_id || 'User'
+        }
       }
       map.set(key, (map.get(key) || 0) + tx.amount)
     })
@@ -274,6 +287,7 @@ export const DashboardPage: React.FC = () => {
                       outerRadius={95}
                       paddingAngle={4}
                       dataKey="value"
+                      nameKey="name"
                     >
                       {chartData.map((_, index) => (
                         <Cell
@@ -283,7 +297,10 @@ export const DashboardPage: React.FC = () => {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(val: unknown) => [formatCurrency(Number(val) || 0, currency), 'Amount']}
+                      formatter={(val: unknown, name: unknown) => [
+                        formatCurrency(Number(val) || 0, currency),
+                        String(name || ''),
+                      ]}
                     />
                   </PieChart>
                 </ResponsiveContainer>

@@ -3,6 +3,7 @@ import { useNotebookStore } from '@/store/useNotebookStore'
 import { useTransactionStore } from '@/store/useTransactionStore'
 import { useMetadataStore } from '@/store/useMetadataStore'
 import { useSettingsStore } from '@/store/useSettingsStore'
+import { useAuthStore } from '@/store/useAuthStore'
 import { formatCurrency } from '@/utils/currency'
 import { formatDisplayDate } from '@/utils/date'
 import { exportElementToPdf } from '@/utils/export'
@@ -51,6 +52,7 @@ export const ReportsPage: React.FC = () => {
   const { t } = useTranslation()
   const { getActiveNotebook } = useNotebookStore()
   const { transactions } = useTransactionStore()
+  const { user } = useAuthStore()
   const { classifications, categories } = useMetadataStore()
   const { dateFormat } = useSettingsStore()
 
@@ -178,15 +180,33 @@ export const ReportsPage: React.FC = () => {
     }))
   }, [monthTransactions, classificationMap, totalAmount])
 
-  // Member Contribution (Bar Chart)
+  // Member Contribution (Bar Chart & Breakdown)
   const userContributionData = useMemo(() => {
-    const map = new Map<string, number>()
+    const map = new Map<string, { total: number; count: number }>()
     monthTransactions.forEach((tx) => {
-      const name = tx.user_id?.length > 10 ? `${tx.user_id.slice(0, 8)}...` : tx.user_id || 'User'
-      map.set(name, (map.get(name) || 0) + tx.amount)
+      let displayName = tx.user_id || 'User'
+      if (
+        user &&
+        (tx.user_id === user.id ||
+          tx.user_id === 'guest' ||
+          (user.is_anonymous && tx.user_id?.startsWith('guest')))
+      ) {
+        displayName = user.name ? `${user.name} (You)` : 'You'
+      } else if (tx.user_id && tx.user_id.length > 15) {
+        displayName = `${tx.user_id.slice(0, 10)}...`
+      }
+
+      const curr = map.get(displayName) || { total: 0, count: 0 }
+      map.set(displayName, { total: curr.total + tx.amount, count: curr.count + 1 })
     })
-    return Array.from(map.entries()).map(([name, amount]) => ({ name, amount }))
-  }, [monthTransactions])
+
+    return Array.from(map.entries()).map(([name, data]) => ({
+      name,
+      amount: data.total,
+      count: data.count,
+      share: totalAmount > 0 ? (data.total / totalAmount) * 100 : 0,
+    }))
+  }, [monthTransactions, user, totalAmount])
 
   // Export PDF Action
   const handleExportPdf = async () => {
@@ -395,6 +415,7 @@ export const ReportsPage: React.FC = () => {
                         outerRadius={90}
                         paddingAngle={3}
                         dataKey="value"
+                        nameKey="name"
                       >
                         {categoryChartData.map((_, index) => (
                           <Cell
@@ -404,9 +425,9 @@ export const ReportsPage: React.FC = () => {
                         ))}
                       </Pie>
                       <Tooltip
-                        formatter={(val: unknown) => [
+                        formatter={(val: unknown, name: unknown) => [
                           formatCurrency(Number(val) || 0, currency),
-                          'Amount',
+                          String(name || ''),
                         ]}
                       />
                     </PieChart>
@@ -415,18 +436,19 @@ export const ReportsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* User Contribution Bar Chart (Collaborative) */}
-            {userContributionData.length > 1 && (
+            {/* User / Member Expense Contribution */}
+            {userContributionData.length > 0 && (
               <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xs">
                 <div className="pb-4 border-b border-slate-100 flex items-center justify-between">
                   <div>
                     <h3 className="text-base font-bold text-slate-900">
                       {t('reports.user_breakdown')}
                     </h3>
-                    <p className="text-xs text-slate-400">Spending per member</p>
+                    <p className="text-xs text-slate-400">Spending per member & user contribution</p>
                   </div>
                   <BarChart3 className="w-5 h-5 text-indigo-500" />
                 </div>
+
                 <div className="h-56 mt-4 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={userContributionData}>
@@ -445,12 +467,39 @@ export const ReportsPage: React.FC = () => {
                       <Tooltip
                         formatter={(val: unknown) => [
                           formatCurrency(Number(val) || 0, currency),
-                          'Contribution',
+                          'Total Spent',
                         ]}
                       />
                       <Bar dataKey="amount" fill="#6366f1" radius={[8, 8, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
+                </div>
+
+                {/* Member summary breakdown list */}
+                <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {userContributionData.map((u) => (
+                    <div
+                      key={u.name}
+                      className="p-3 rounded-2xl bg-slate-50 border border-slate-100 space-y-1.5"
+                    >
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="font-bold text-slate-800 truncate">{u.name}</span>
+                        <span className="font-bold text-indigo-600">
+                          {formatCurrency(u.amount, currency)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-[11px] text-slate-500">
+                        <span>{u.count} transactions</span>
+                        <span>{u.share.toFixed(1)}%</span>
+                      </div>
+                      <div className="w-full h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                        <div
+                          className="h-full bg-indigo-600 rounded-full transition-all"
+                          style={{ width: `${Math.min(100, u.share)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
