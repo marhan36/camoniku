@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { Notebook, PendingMemberInvite, NotebookInvitation } from '@/types'
 import { localDB } from '@/lib/storage/localStorage'
 import { db } from '@/lib/firebase/config'
-import { doc, setDoc, deleteDoc, updateDoc, collection, addDoc, getDoc } from 'firebase/firestore'
+import { doc, setDoc, deleteDoc, updateDoc, getDoc } from 'firebase/firestore'
 import { useAuthStore } from './useAuthStore'
 import { useUserDirectoryStore } from './useUserDirectoryStore'
 import { toast } from 'sonner'
@@ -295,47 +295,9 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
       } catch (e) {
         console.warn('Error saving invitation doc to Firestore:', e)
       }
-
-      // 2. Queue email in Firestore 'mail' collection (Firebase Trigger Email)
-      try {
-        await addDoc(collection(db, 'mail'), {
-          to: [targetEmail],
-          message: {
-            subject: `Invitation to collaborate on "${notebook.name}" - Camoniku`,
-            text: `Hello,\n\n${invitation.owner_name} has invited you to collaborate on the notebook "${notebook.name}" on Camoniku.\n\nClick the link below to confirm and accept the invitation:\n${inviteUrl}\n\nPlease sign in with ${targetEmail} to accept.`,
-            html: `
-              <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff;">
-                <h2 style="color: #4f46e5; margin-top: 0; font-size: 20px;">Camoniku Notebook Invitation</h2>
-                <p style="color: #334155; font-size: 15px; line-height: 1.5;">
-                  <strong>${invitation.owner_name}</strong> (${invitation.owner_email || 'Owner'}) has invited you to collaborate on the shared notebook:
-                </p>
-                <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin: 18px 0;">
-                  <span style="font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; display: block; margin-bottom: 4px;">Notebook</span>
-                  <span style="font-size: 18px; font-weight: bold; color: #0f172a;">${notebook.name}</span>
-                  <span style="display: inline-block; margin-left: 8px; font-size: 11px; background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 6px; font-weight: 600;">${notebook.currency}</span>
-                </div>
-                <div style="margin: 24px 0;">
-                  <a href="${inviteUrl}" style="background-color: #4f46e5; color: #ffffff; padding: 12px 24px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px; display: inline-block;">
-                    Confirm & Accept Invitation
-                  </a>
-                </div>
-                <p style="color: #64748b; font-size: 12px; line-height: 1.5;">
-                  If the button doesn't work, copy and paste this link in your browser:<br/>
-                  <a href="${inviteUrl}" style="color: #4f46e5; word-break: break-all;">${inviteUrl}</a>
-                </p>
-                <div style="border-top: 1px solid #f1f5f9; margin-top: 24px; padding-top: 12px; font-size: 11px; color: #94a3b8;">
-                  This invitation was sent to <strong>${targetEmail}</strong>. If you did not expect this invitation, you can safely ignore this email.
-                </div>
-              </div>
-            `,
-          },
-        })
-      } catch (e) {
-        console.warn('Mail extension queue warning:', e)
-      }
     }
 
-    // 3. Update pending_invites on notebook
+    // 2. Update pending_invites on notebook
     const newPendingItem: PendingMemberInvite = {
       id: inviteId,
       email: targetEmail,
@@ -345,7 +307,7 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
     const updatedPending = [...currentPending.filter((p) => p.email.toLowerCase() !== targetEmail), newPendingItem]
     await get().updateNotebook(notebookId, { pending_invites: updatedPending })
 
-    toast.success(`Confirmation email sent to ${targetEmail}`)
+    toast.success(`Invitation created for ${targetEmail}`)
     return { success: true, inviteId, inviteUrl }
   },
 

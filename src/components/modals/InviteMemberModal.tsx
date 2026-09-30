@@ -13,7 +13,6 @@ import {
   User as UserIcon,
   Copy,
   Check,
-  ExternalLink,
   Send,
   Clock,
   AlertCircle,
@@ -71,14 +70,6 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
     } catch {
       toast.error('Failed to copy link.')
     }
-  }
-
-  const handleOpenMailto = (targetEmail: string, inviteUrl: string) => {
-    const subject = encodeURIComponent(`Invitation to collaborate on "${liveNotebook.name}" - Camoniku`)
-    const body = encodeURIComponent(
-      `Hello,\n\nI have invited you to collaborate on the shared notebook "${liveNotebook.name}" on Camoniku.\n\nClick the link below to confirm and join:\n${inviteUrl}\n\nPlease sign in with ${targetEmail} to accept.\n\nBest regards,\n${user?.name || 'Camoniku User'}`
-    )
-    window.open(`mailto:${targetEmail}?subject=${subject}&body=${body}`, '_blank')
   }
 
   const handleInvite = async (e: React.FormEvent) => {
@@ -175,7 +166,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                   </button>
                 </div>
                 <p className="text-[11px] text-slate-400">
-                  An email confirmation link will be sent to the invitee. They will join after confirming.
+                  Invited members will see a prompt to join when opening the app, or you can share the link directly.
                 </p>
               </form>
             ) : (
@@ -294,14 +285,6 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                             ) : (
                               <Copy className="w-3.5 h-3.5" />
                             )}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenMailto(invite.email, inviteUrl)}
-                            className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white rounded-lg transition cursor-pointer"
-                            title="Send via Email Client"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
                           </button>
                           {isOwner && (
                             <button

@@ -68,11 +68,6 @@ service cloud.firestore {
       allow list, create, update, delete: if isAuthenticated();
     }
 
-    // Mail Collection (Firebase Trigger Email Extension)
-    match /mail/{mailId} {
-      allow create, read: if isAuthenticated();
-    }
-
     // Classifications Collection
     match /classifications/{classificationId} {
       allow read: if isAuthenticated() &&
