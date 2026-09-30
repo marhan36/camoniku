@@ -60,23 +60,30 @@ export const TransactionsPage: React.FC = () => {
   const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // Active notebook classifications & categories
+  // Active notebook classifications & categories (for filter dropdowns)
   const notebookClassifications = useMemo(
-    () => classifications.filter((c) => c.notebook_id === notebookId),
+    () => classifications.filter((c) => c.notebook_id === notebookId && c.is_active !== false),
     [classifications, notebookId]
   )
   const notebookCategories = useMemo(
-    () => categories.filter((c) => c.notebook_id === notebookId),
+    () => categories.filter((c) => c.notebook_id === notebookId && c.is_active !== false),
     [categories, notebookId]
   )
 
+  // Maps include all items (active and inactive) so historical transaction names display properly
   const classificationMap = useMemo(
-    () => new Map(notebookClassifications.map((c) => [c.id, c.name])),
-    [notebookClassifications]
+    () =>
+      new Map(
+        classifications.filter((c) => c.notebook_id === notebookId).map((c) => [c.id, c.name])
+      ),
+    [classifications, notebookId]
   )
   const categoryMap = useMemo(
-    () => new Map(notebookCategories.map((c) => [c.id, c.name])),
-    [notebookCategories]
+    () =>
+      new Map(
+        categories.filter((c) => c.notebook_id === notebookId).map((c) => [c.id, c.name])
+      ),
+    [categories, notebookId]
   )
 
   // Available users in transactions for filter dropdown

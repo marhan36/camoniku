@@ -47,8 +47,10 @@ export const useMetadataStore = create<MetadataState>((set, get) => ({
     }
 
     const normalized = normalizeString(trimmed)
-    const existing = get().classifications.filter((c) => c.notebook_id === notebookId)
-    const isDuplicate = existing.some((c) => normalizeString(c.name) === normalized)
+    const activeExisting = get().classifications.filter(
+      (c) => c.notebook_id === notebookId && c.is_active !== false
+    )
+    const isDuplicate = activeExisting.some((c) => normalizeString(c.name) === normalized)
 
     if (isDuplicate) {
       toast.error(i18n.t('validation.name_unique'))
@@ -56,6 +58,47 @@ export const useMetadataStore = create<MetadataState>((set, get) => ({
     }
 
     const now = new Date().toISOString()
+    const user = useAuthStore.getState().user
+
+    // Check if an inactive (deleted) classification exists with this normalized name
+    const inactiveExisting = get().classifications.find(
+      (c) =>
+        c.notebook_id === notebookId &&
+        c.is_active === false &&
+        normalizeString(c.name) === normalized
+    )
+
+    if (inactiveExisting) {
+      // Reactivate with the new name
+      const reactivated: Classification = {
+        ...inactiveExisting,
+        name: trimmed,
+        is_active: true,
+        updated_at: now,
+      }
+
+      const updated = get().classifications.map((c) =>
+        c.id === inactiveExisting.id ? reactivated : c
+      )
+      localDB.setClassifications(updated)
+      set({ classifications: updated })
+
+      if (user && !user.is_anonymous) {
+        try {
+          await updateDoc(doc(db, 'classifications', reactivated.id), {
+            name: trimmed,
+            is_active: true,
+            updated_at: now,
+          })
+        } catch (e) {
+          console.warn('Error reactivating classification in Firestore:', e)
+        }
+      }
+
+      toast.success(i18n.t('toasts.classification_created'))
+      return reactivated
+    }
+
     const newClassification: Classification = {
       id: crypto.randomUUID(),
       notebook_id: notebookId,
@@ -69,7 +112,6 @@ export const useMetadataStore = create<MetadataState>((set, get) => ({
     localDB.setClassifications(updated)
     set({ classifications: updated })
 
-    const user = useAuthStore.getState().user
     if (user && !user.is_anonymous) {
       try {
         await setDoc(doc(db, 'classifications', newClassification.id), newClassification)
@@ -90,8 +132,10 @@ export const useMetadataStore = create<MetadataState>((set, get) => ({
     }
 
     const normalized = normalizeString(trimmed)
-    const existing = get().categories.filter((c) => c.notebook_id === notebookId)
-    const isDuplicate = existing.some((c) => normalizeString(c.name) === normalized)
+    const activeExisting = get().categories.filter(
+      (c) => c.notebook_id === notebookId && c.is_active !== false
+    )
+    const isDuplicate = activeExisting.some((c) => normalizeString(c.name) === normalized)
 
     if (isDuplicate) {
       toast.error(i18n.t('validation.name_unique'))
@@ -99,6 +143,47 @@ export const useMetadataStore = create<MetadataState>((set, get) => ({
     }
 
     const now = new Date().toISOString()
+    const user = useAuthStore.getState().user
+
+    // Check if an inactive (deleted) category exists with this normalized name
+    const inactiveExisting = get().categories.find(
+      (c) =>
+        c.notebook_id === notebookId &&
+        c.is_active === false &&
+        normalizeString(c.name) === normalized
+    )
+
+    if (inactiveExisting) {
+      // Reactivate with the new name
+      const reactivated: Category = {
+        ...inactiveExisting,
+        name: trimmed,
+        is_active: true,
+        updated_at: now,
+      }
+
+      const updated = get().categories.map((c) =>
+        c.id === inactiveExisting.id ? reactivated : c
+      )
+      localDB.setCategories(updated)
+      set({ categories: updated })
+
+      if (user && !user.is_anonymous) {
+        try {
+          await updateDoc(doc(db, 'categories', reactivated.id), {
+            name: trimmed,
+            is_active: true,
+            updated_at: now,
+          })
+        } catch (e) {
+          console.warn('Error reactivating category in Firestore:', e)
+        }
+      }
+
+      toast.success(i18n.t('toasts.category_created'))
+      return reactivated
+    }
+
     const newCategory: Category = {
       id: crypto.randomUUID(),
       notebook_id: notebookId,
@@ -112,7 +197,6 @@ export const useMetadataStore = create<MetadataState>((set, get) => ({
     localDB.setCategories(updated)
     set({ categories: updated })
 
-    const user = useAuthStore.getState().user
     if (user && !user.is_anonymous) {
       try {
         await setDoc(doc(db, 'categories', newCategory.id), newCategory)
@@ -194,35 +278,41 @@ export const useMetadataStore = create<MetadataState>((set, get) => ({
   },
 
   deleteClassification: async (id: string) => {
-    const updated = get().classifications.filter((c) => c.id !== id)
+    const now = new Date().toISOString()
+    const updated = get().classifications.map((c) =>
+      c.id === id ? { ...c, is_active: false, updated_at: now } : c
+    )
     localDB.setClassifications(updated)
     set({ classifications: updated })
 
     const user = useAuthStore.getState().user
     if (user && !user.is_anonymous) {
       try {
-        await deleteDoc(doc(db, 'classifications', id))
+        await updateDoc(doc(db, 'classifications', id), { is_active: false, updated_at: now })
       } catch (e) {
-        console.warn('Error deleting classification from Firestore:', e)
+        console.warn('Error marking classification inactive in Firestore:', e)
       }
     }
-    toast.success('Classification removed')
+    toast.success('Classification deleted')
   },
 
   deleteCategory: async (id: string) => {
-    const updated = get().categories.filter((c) => c.id !== id)
+    const now = new Date().toISOString()
+    const updated = get().categories.map((c) =>
+      c.id === id ? { ...c, is_active: false, updated_at: now } : c
+    )
     localDB.setCategories(updated)
     set({ categories: updated })
 
     const user = useAuthStore.getState().user
     if (user && !user.is_anonymous) {
       try {
-        await deleteDoc(doc(db, 'categories', id))
+        await updateDoc(doc(db, 'categories', id), { is_active: false, updated_at: now })
       } catch (e) {
-        console.warn('Error deleting category from Firestore:', e)
+        console.warn('Error marking category inactive in Firestore:', e)
       }
     }
-    toast.success('Category removed')
+    toast.success('Category deleted')
   },
 
   initMetadata: () => {

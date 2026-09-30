@@ -42,8 +42,8 @@ export const AddMetadataModal: React.FC<AddMetadataModalProps> = ({
     // Strict uniqueness check (ignoring case, whitespace, punctuation)
     const normalizedInput = normalizeString(trimmed)
     const existingList = isClassification
-      ? classifications.filter((c) => c.notebook_id === notebookId)
-      : categories.filter((c) => c.notebook_id === notebookId)
+      ? classifications.filter((c) => c.notebook_id === notebookId && c.is_active !== false)
+      : categories.filter((c) => c.notebook_id === notebookId && c.is_active !== false)
 
     const isDuplicate = existingList.some(
       (item) => normalizeString(item.name) === normalizedInput

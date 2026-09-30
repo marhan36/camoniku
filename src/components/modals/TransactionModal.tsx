@@ -41,9 +41,17 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   // Sub-modal state for "Add New..."
   const [subModalType, setSubModalType] = useState<'classification' | 'category' | null>(null)
 
-  // Filter classifications & categories for active notebook
-  const notebookClassifications = classifications.filter((c) => c.notebook_id === notebookId)
-  const notebookCategories = categories.filter((c) => c.notebook_id === notebookId)
+  // Filter classifications & categories for active notebook (active ones or current edited)
+  const notebookClassifications = classifications.filter(
+    (c) =>
+      c.notebook_id === notebookId &&
+      (c.is_active !== false || c.id === transactionToEdit?.classification_id)
+  )
+  const notebookCategories = categories.filter(
+    (c) =>
+      c.notebook_id === notebookId &&
+      (c.is_active !== false || c.id === transactionToEdit?.category_id)
+  )
 
   useEffect(() => {
     if (isOpen) {

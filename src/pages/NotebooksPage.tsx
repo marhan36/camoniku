@@ -5,6 +5,7 @@ import { useTransactionStore } from '@/store/useTransactionStore'
 import { Notebook } from '@/types'
 import { NotebookModal } from '@/components/modals/NotebookModal'
 import { InviteMemberModal } from '@/components/modals/InviteMemberModal'
+import { ManageMetadataModal } from '@/components/modals/ManageMetadataModal'
 import { ConfirmModal } from '@/components/common/ConfirmModal'
 import { EmptyState } from '@/components/common/EmptyState'
 import {
@@ -16,6 +17,7 @@ import {
   CheckCircle2,
   Shield,
   Receipt,
+  Tags,
   User as UserIcon,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -29,6 +31,7 @@ export const NotebooksPage: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [editingNotebook, setEditingNotebook] = useState<Notebook | null>(null)
   const [managingMembersNotebook, setManagingMembersNotebook] = useState<Notebook | null>(null)
+  const [managingMetadataNotebook, setManagingMetadataNotebook] = useState<Notebook | null>(null)
   const [deletingNotebookId, setDeletingNotebookId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -160,6 +163,16 @@ export const NotebooksPage: React.FC = () => {
                   )}
 
                   <div className="flex items-center gap-1 ml-auto">
+                    {/* Classifications & Categories */}
+                    <button
+                      type="button"
+                      onClick={() => setManagingMetadataNotebook(nb)}
+                      className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition cursor-pointer"
+                      title="Manage Classifications & Categories"
+                    >
+                      <Tags className="w-4 h-4" />
+                    </button>
+
                     {/* Invite / Manage Members */}
                     <button
                       type="button"
@@ -216,6 +229,13 @@ export const NotebooksPage: React.FC = () => {
         isOpen={!!managingMembersNotebook}
         notebook={managingMembersNotebook}
         onClose={() => setManagingMembersNotebook(null)}
+      />
+
+      {/* Classifications & Categories Modal */}
+      <ManageMetadataModal
+        isOpen={!!managingMetadataNotebook}
+        notebook={managingMetadataNotebook}
+        onClose={() => setManagingMetadataNotebook(null)}
       />
 
       {/* Delete Confirmation Modal (NEVER native window.confirm) */}
