@@ -140,9 +140,14 @@ export const NotebooksPage: React.FC = () => {
                       <Receipt className="w-4 h-4 text-slate-400" />
                       <span>{txCount} transactions</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <Users className="w-4 h-4 text-slate-400" />
-                      <span>{memberCount} members</span>
+                    <div className="flex items-center gap-1.5 truncate">
+                      <Users className="w-4 h-4 text-slate-400 shrink-0" />
+                      <span className="truncate">
+                        {memberCount} {memberCount === 1 ? 'member' : 'members'}
+                        {nb.pending_invites && nb.pending_invites.length > 0 && (
+                          <span className="text-amber-600 font-semibold"> ({nb.pending_invites.length} pending)</span>
+                        )}
+                      </span>
                     </div>
                   </div>
 

@@ -10,12 +10,37 @@ export interface User {
   is_anonymous: boolean
 }
 
+export interface PendingMemberInvite {
+  id: string
+  email: string
+  created_at: string
+}
+
+export interface NotebookInvitation {
+  id: string
+  notebook_id: string
+  notebook_name: string
+  currency: string
+  owner_id: string
+  owner_name: string
+  owner_email: string | null
+  invitee_email: string
+  status: 'pending' | 'accepted' | 'declined' | 'revoked'
+  created_at: string
+  updated_at: string
+  accepted_at?: string
+  accepted_by?: string
+  accepted_by_name?: string
+  accepted_by_email?: string
+}
+
 export interface Notebook {
   id: string
   name: string
   currency: CurrencyCode | string
   owner_id: string
   member_ids: string[]
+  pending_invites?: PendingMemberInvite[]
   created_at: string
   updated_at: string
 }

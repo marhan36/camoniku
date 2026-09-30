@@ -16,6 +16,7 @@ import { ReportsPage } from '@/pages/ReportsPage'
 import { NotebooksPage } from '@/pages/NotebooksPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
+import { ConfirmInvitePage } from '@/pages/ConfirmInvitePage'
 
 // Protected Route Guard
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -81,6 +82,9 @@ export function App() {
               </PublicRoute>
             }
           />
+
+          {/* Invitation Confirmation Route */}
+          <Route path="/invite/:inviteId" element={<ConfirmInvitePage />} />
 
           {/* Protected Application Routes */}
           <Route

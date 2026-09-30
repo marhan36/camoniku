@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import { Navbar } from './Navbar'
 import { Toaster } from 'sonner'
 import { useSync } from '@/hooks/useSync'
+import { PendingInvitationsBanner } from '@/components/common/PendingInvitationsBanner'
 
 export const AppLayout: React.FC = () => {
   // Activate real-time sync and network listener
@@ -18,6 +19,7 @@ export const AppLayout: React.FC = () => {
 
       {/* Page Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <PendingInvitationsBanner />
         <Outlet />
       </main>
     </div>

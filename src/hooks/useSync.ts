@@ -70,8 +70,41 @@ export function useSync() {
       }
     )
 
+    // Listen to accepted invitations for owner's notebooks to ensure member_ids are synced
+    const invRef = collection(db, 'invitations')
+    const qAcceptedInv = query(
+      invRef,
+      where('owner_id', '==', user.id),
+      where('status', '==', 'accepted')
+    )
+    const unsubInv = onSnapshot(
+      qAcceptedInv,
+      async (snapshot) => {
+        const { notebooks, updateNotebook } = useNotebookStore.getState()
+        for (const docSnap of snapshot.docs) {
+          const inv = docSnap.data()
+          if (!inv.accepted_by) continue
+          const nb = notebooks.find((n) => n.id === inv.notebook_id)
+          if (
+            nb &&
+            (!nb.member_ids.includes(inv.accepted_by) ||
+              nb.pending_invites?.some((p) => p.id === inv.id))
+          ) {
+            const updatedMembers = Array.from(new Set([...nb.member_ids, inv.accepted_by]))
+            const updatedPending = (nb.pending_invites || []).filter((p) => p.id !== inv.id)
+            await updateNotebook(nb.id, {
+              member_ids: updatedMembers,
+              pending_invites: updatedPending,
+            })
+          }
+        }
+      },
+      (err) => console.warn('Accepted invitations listener error:', err)
+    )
+
     return () => {
       unsubNotebooks()
+      unsubInv()
     }
   }, [user, setNotebooks, setSyncStatus])
 

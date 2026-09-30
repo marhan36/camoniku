@@ -49,12 +49,28 @@ service cloud.firestore {
         request.resource.data.owner_id == request.auth.uid &&
         (request.auth.uid in request.resource.data.member_ids);
 
-      // Only Owner can update notebook details or member_ids
-      allow update: if isNotebookOwner(resource.data) &&
-        request.resource.data.owner_id == resource.data.owner_id;
+      // Only Owner can update notebook details or member_ids, OR an authenticated user joining via invite
+      allow update: if isAuthenticated() && (
+        (isNotebookOwner(resource.data) && request.resource.data.owner_id == resource.data.owner_id) ||
+        (
+          request.resource.data.owner_id == resource.data.owner_id &&
+          request.auth.uid in request.resource.data.member_ids
+        )
+      );
 
       // Only Owner can delete notebook
       allow delete: if isNotebookOwner(resource.data);
+    }
+
+    // Invitations Collection
+    match /invitations/{invitationId} {
+      allow get: if true;
+      allow list, create, update, delete: if isAuthenticated();
+    }
+
+    // Mail Collection (Firebase Trigger Email Extension)
+    match /mail/{mailId} {
+      allow create, read: if isAuthenticated();
     }
 
     // Classifications Collection
