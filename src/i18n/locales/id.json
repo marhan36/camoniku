@@ -85,6 +85,11 @@
     "category_breakdown": "Pengeluaran per Kategori",
     "user_breakdown": "Kontribusi Anggota",
     "breakdown_summary": "Rangkuman Pengeluaran",
+    "by_category": "Berdasarkan Kategori",
+    "by_classification": "Berdasarkan Klasifikasi",
+    "member_expense_details": "Detail Pengeluaran Anggota",
+    "categories_label": "Kategori",
+    "classifications_label": "Klasifikasi",
     "count": "Jumlah",
     "percentage": "Porsi"
   },

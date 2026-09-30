@@ -18,6 +18,9 @@ import {
   BarChart3,
   Calendar,
   Loader2,
+  Tag,
+  Folder,
+  User as UserIcon,
 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -32,6 +35,7 @@ import {
   BarChart,
   Bar,
   CartesianGrid,
+  Legend,
 } from 'recharts'
 import { useTranslation } from 'react-i18next'
 import { parseISO, getYear, getMonth, getDaysInMonth, subMonths } from 'date-fns'
@@ -65,6 +69,7 @@ export const ReportsPage: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear())
   const [selectedMonth, setSelectedMonth] = useState<number>(now.getMonth() + 1)
   const [isExportingPdf, setIsExportingPdf] = useState(false)
+  const [memberChartStackMode, setMemberChartStackMode] = useState<'category' | 'classification'>('category')
 
   // Maps
   const classificationMap = useMemo(
@@ -180,9 +185,18 @@ export const ReportsPage: React.FC = () => {
     }))
   }, [monthTransactions, classificationMap, totalAmount])
 
-  // Member Contribution (Bar Chart & Breakdown)
-  const userContributionData = useMemo(() => {
-    const map = new Map<string, { total: number; count: number }>()
+  // Detailed Member Data with Category & Classification breakdown
+  const memberDetailedData = useMemo(() => {
+    const memberMap = new Map<
+      string,
+      {
+        total: number
+        count: number
+        categories: Map<string, number>
+        classifications: Map<string, number>
+      }
+    >()
+
     monthTransactions.forEach((tx) => {
       let displayName = tx.user_id || 'User'
       if (
@@ -196,17 +210,86 @@ export const ReportsPage: React.FC = () => {
         displayName = `${tx.user_id.slice(0, 10)}...`
       }
 
-      const curr = map.get(displayName) || { total: 0, count: 0 }
-      map.set(displayName, { total: curr.total + tx.amount, count: curr.count + 1 })
+      if (!memberMap.has(displayName)) {
+        memberMap.set(displayName, {
+          total: 0,
+          count: 0,
+          categories: new Map<string, number>(),
+          classifications: new Map<string, number>(),
+        })
+      }
+
+      const m = memberMap.get(displayName)!
+      m.total += tx.amount
+      m.count += 1
+
+      const catName = categoryMap.get(tx.category_id) || 'Uncategorized'
+      m.categories.set(catName, (m.categories.get(catName) || 0) + tx.amount)
+
+      const clsName = classificationMap.get(tx.classification_id) || 'Unclassified'
+      m.classifications.set(clsName, (m.classifications.get(clsName) || 0) + tx.amount)
     })
 
-    return Array.from(map.entries()).map(([name, data]) => ({
-      name,
-      amount: data.total,
-      count: data.count,
-      share: totalAmount > 0 ? (data.total / totalAmount) * 100 : 0,
-    }))
-  }, [monthTransactions, user, totalAmount])
+    return Array.from(memberMap.entries())
+      .map(([name, data]) => {
+        const categoriesList = Array.from(data.categories.entries())
+          .map(([catName, amt]) => ({
+            name: catName,
+            amount: amt,
+            percentage: data.total > 0 ? (amt / data.total) * 100 : 0,
+          }))
+          .sort((a, b) => b.amount - a.amount)
+
+        const classificationsList = Array.from(data.classifications.entries())
+          .map(([clsName, amt]) => ({
+            name: clsName,
+            amount: amt,
+            percentage: data.total > 0 ? (amt / data.total) * 100 : 0,
+          }))
+          .sort((a, b) => b.amount - a.amount)
+
+        return {
+          name,
+          amount: data.total,
+          count: data.count,
+          share: totalAmount > 0 ? (data.total / totalAmount) * 100 : 0,
+          categories: categoriesList,
+          classifications: classificationsList,
+        }
+      })
+      .sort((a, b) => b.amount - a.amount)
+  }, [monthTransactions, user, categoryMap, classificationMap, totalAmount])
+
+  // Stacked chart data according to selected stack mode (Category vs Classification)
+  const { memberStackedChartData, memberStackKeys } = useMemo(() => {
+    const keySet = new Set<string>()
+
+    const data = memberDetailedData.map((m) => {
+      const row: Record<string, any> = {
+        name: m.name,
+        total: m.amount,
+      }
+
+      if (memberChartStackMode === 'category') {
+        m.categories.forEach((cat) => {
+          row[cat.name] = cat.amount
+          keySet.add(cat.name)
+        })
+      } else {
+        m.classifications.forEach((cls) => {
+          row[cls.name] = cls.amount
+          keySet.add(cls.name)
+        })
+      }
+
+      return row
+    })
+
+    return {
+      memberStackedChartData: data,
+      memberStackKeys: Array.from(keySet),
+    }
+  }, [memberDetailedData, memberChartStackMode])
 
   // Export PDF Action
   const handleExportPdf = async () => {
@@ -437,21 +520,49 @@ export const ReportsPage: React.FC = () => {
             </div>
 
             {/* User / Member Expense Contribution */}
-            {userContributionData.length > 0 && (
-              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xs">
-                <div className="pb-4 border-b border-slate-100 flex items-center justify-between">
+            {memberDetailedData.length > 0 && (
+              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xs space-y-6">
+                <div className="pb-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <h3 className="text-base font-bold text-slate-900">
                       {t('reports.user_breakdown')}
                     </h3>
-                    <p className="text-xs text-slate-400">Spending per member & user contribution</p>
+                    <p className="text-xs text-slate-400">
+                      Spending per member broken down by classification and category
+                    </p>
                   </div>
-                  <BarChart3 className="w-5 h-5 text-indigo-500" />
+
+                  {/* Stack Mode Switcher */}
+                  <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl self-start sm:self-auto text-xs font-medium">
+                    <button
+                      type="button"
+                      onClick={() => setMemberChartStackMode('category')}
+                      className={`px-3 py-1.5 rounded-lg transition-all ${
+                        memberChartStackMode === 'category'
+                          ? 'bg-white text-indigo-600 font-bold shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      {t('reports.by_category', 'By Category')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMemberChartStackMode('classification')}
+                      className={`px-3 py-1.5 rounded-lg transition-all ${
+                        memberChartStackMode === 'classification'
+                          ? 'bg-white text-indigo-600 font-bold shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      {t('reports.by_classification', 'By Classification')}
+                    </button>
+                  </div>
                 </div>
 
-                <div className="h-56 mt-4 w-full">
+                {/* Stacked Bar Chart */}
+                <div className="h-72 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={userContributionData}>
+                    <BarChart data={memberStackedChartData}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                       <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                       <YAxis
@@ -465,41 +576,121 @@ export const ReportsPage: React.FC = () => {
                         }
                       />
                       <Tooltip
-                        formatter={(val: unknown) => [
+                        formatter={(val: unknown, name: unknown) => [
                           formatCurrency(Number(val) || 0, currency),
-                          'Total Spent',
+                          String(name || ''),
                         ]}
                       />
-                      <Bar dataKey="amount" fill="#6366f1" radius={[8, 8, 0, 0]} />
+                      <Legend wrapperStyle={{ fontSize: 11, paddingTop: 10 }} />
+                      {memberStackKeys.map((key, idx) => (
+                        <Bar
+                          key={key}
+                          dataKey={key}
+                          name={key}
+                          stackId="memberStack"
+                          fill={CHART_COLORS[idx % CHART_COLORS.length]}
+                          radius={
+                            idx === memberStackKeys.length - 1 ? [6, 6, 0, 0] : [0, 0, 0, 0]
+                          }
+                        />
+                      ))}
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
 
-                {/* Member summary breakdown list */}
-                <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {userContributionData.map((u) => (
-                    <div
-                      key={u.name}
-                      className="p-3 rounded-2xl bg-slate-50 border border-slate-100 space-y-1.5"
-                    >
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="font-bold text-slate-800 truncate">{u.name}</span>
-                        <span className="font-bold text-indigo-600">
-                          {formatCurrency(u.amount, currency)}
-                        </span>
+                {/* Detailed Member Breakdown Cards */}
+                <div className="pt-2 border-t border-slate-100">
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4">
+                    {t('reports.member_expense_details', 'Member Expense Details')}
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {memberDetailedData.map((m) => (
+                      <div
+                        key={m.name}
+                        className="p-5 rounded-2xl bg-slate-50/70 border border-slate-100 flex flex-col justify-between space-y-4"
+                      >
+                        <div>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs shrink-0">
+                                {m.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-bold text-sm text-slate-900 truncate">{m.name}</p>
+                                <p className="text-[11px] text-slate-500">
+                                  {m.count} {m.count === 1 ? 'transaction' : 'transactions'}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="font-bold text-sm text-indigo-600">
+                                {formatCurrency(m.amount, currency)}
+                              </p>
+                              <p className="text-[11px] font-semibold text-slate-500">
+                                {m.share.toFixed(1)}% of total
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="w-full h-1.5 rounded-full bg-slate-200 overflow-hidden mt-3">
+                            <div
+                              className="h-full bg-indigo-600 rounded-full transition-all"
+                              style={{ width: `${Math.min(100, m.share)}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Breakdown Columns: Category & Classification */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-slate-200/60 text-xs">
+                          {/* Categories */}
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-600">
+                              <Tag className="w-3 h-3 text-indigo-500" />
+                              <span>{t('reports.categories_label', 'Categories')}</span>
+                            </div>
+                            <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                              {m.categories.map((c) => (
+                                <div key={c.name} className="flex justify-between items-center text-[11px]">
+                                  <span className="text-slate-600 truncate max-w-[100px]" title={c.name}>
+                                    {c.name}
+                                  </span>
+                                  <span className="text-slate-800 font-medium shrink-0 ml-1">
+                                    {formatCurrency(c.amount, currency)}{' '}
+                                    <span className="text-slate-400 text-[10px]">
+                                      ({c.percentage.toFixed(0)}%)
+                                    </span>
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Classifications */}
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-600">
+                              <Folder className="w-3 h-3 text-violet-500" />
+                              <span>{t('reports.classifications_label', 'Classifications')}</span>
+                            </div>
+                            <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                              {m.classifications.map((cls) => (
+                                <div key={cls.name} className="flex justify-between items-center text-[11px]">
+                                  <span className="text-slate-600 truncate max-w-[100px]" title={cls.name}>
+                                    {cls.name}
+                                  </span>
+                                  <span className="text-slate-800 font-medium shrink-0 ml-1">
+                                    {formatCurrency(cls.amount, currency)}{' '}
+                                    <span className="text-slate-400 text-[10px]">
+                                      ({cls.percentage.toFixed(0)}%)
+                                    </span>
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex justify-between items-center text-[11px] text-slate-500">
-                        <span>{u.count} transactions</span>
-                        <span>{u.share.toFixed(1)}%</span>
-                      </div>
-                      <div className="w-full h-1.5 rounded-full bg-slate-200 overflow-hidden">
-                        <div
-                          className="h-full bg-indigo-600 rounded-full transition-all"
-                          style={{ width: `${Math.min(100, u.share)}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
             )}

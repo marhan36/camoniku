@@ -85,6 +85,11 @@
     "category_breakdown": "Expenses by Category",
     "user_breakdown": "Member Spending Contribution",
     "breakdown_summary": "Spending Summaries",
+    "by_category": "By Category",
+    "by_classification": "By Classification",
+    "member_expense_details": "Member Expense Details",
+    "categories_label": "Categories",
+    "classifications_label": "Classifications",
     "count": "Count",
     "percentage": "Share"
   },
