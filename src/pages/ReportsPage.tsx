@@ -207,7 +207,7 @@ export const ReportsPage: React.FC = () => {
     >()
 
     monthTransactions.forEach((tx) => {
-      const displayName = tx.user_name || getUserName(tx.user_id, true)
+      const displayName = getUserName(tx.user_id, true, tx.user_name)
 
       if (!memberMap.has(displayName)) {
         memberMap.set(displayName, {

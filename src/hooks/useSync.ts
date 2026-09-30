@@ -6,6 +6,7 @@ import { useNotebookStore } from '@/store/useNotebookStore'
 import { useMetadataStore } from '@/store/useMetadataStore'
 import { useTransactionStore } from '@/store/useTransactionStore'
 import { useNetworkStore } from '@/store/useNetworkStore'
+import { useUserDirectoryStore } from '@/store/useUserDirectoryStore'
 import { Notebook, Classification, Category, Transaction } from '@/types'
 
 export function useSync() {
@@ -61,6 +62,12 @@ export function useSync() {
         })
         if (loadedNotebooks.length > 0) {
           setNotebooks(loadedNotebooks)
+          const allUserIds: string[] = []
+          loadedNotebooks.forEach((nb) => {
+            if (nb.owner_id) allUserIds.push(nb.owner_id)
+            if (nb.member_ids) allUserIds.push(...nb.member_ids)
+          })
+          useUserDirectoryStore.getState().fetchUsers(allUserIds)
         }
         setSyncStatus('synced')
       },
@@ -160,6 +167,8 @@ export function useSync() {
         snapshot.forEach((d) => items.push(d.data() as Transaction))
         setTransactions(items)
         setSyncStatus('synced')
+        const txAuthors = items.map((t) => t.user_id).filter(Boolean)
+        useUserDirectoryStore.getState().fetchUsers(txAuthors)
       },
       (e) => {
         console.warn('Transactions sync error:', e)

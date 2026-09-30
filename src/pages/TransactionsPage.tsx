@@ -449,7 +449,7 @@ export const TransactionsPage: React.FC = () => {
                           {tx.description || '-'}
                         </td>
                         <td className="py-3.5 px-4 text-xs text-slate-500">
-                          {tx.user_name || getUserName(tx.user_id)}
+                          {getUserName(tx.user_id, false, tx.user_name)}
                         </td>
                         <td className="py-3.5 px-6 text-right font-bold text-slate-900">
                           {formatCurrency(tx.amount, currency)}
@@ -514,7 +514,7 @@ export const TransactionsPage: React.FC = () => {
 
                     <div className="flex items-center justify-between pt-1">
                       <span className="text-[11px] text-slate-400">
-                        By: {tx.user_name || getUserName(tx.user_id)}
+                        By: {getUserName(tx.user_id, false, tx.user_name)}
                       </span>
                       <div className="flex items-center gap-1">
                         <button

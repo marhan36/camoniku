@@ -122,7 +122,7 @@ export const DashboardPage: React.FC = () => {
       } else if (groupBy === 'classification') {
         key = classificationMap.get(tx.classification_id) || 'Unclassified'
       } else if (groupBy === 'user') {
-        key = tx.user_name || getUserName(tx.user_id, true)
+        key = getUserName(tx.user_id, true, tx.user_name)
       }
       map.set(key, (map.get(key) || 0) + tx.amount)
     })

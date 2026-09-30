@@ -9,6 +9,7 @@ import i18n from '@/i18n'
 import { useNotebookStore } from './useNotebookStore'
 import { useMetadataStore } from './useMetadataStore'
 import { useTransactionStore } from './useTransactionStore'
+import { useUserDirectoryStore } from './useUserDirectoryStore'
 
 interface AuthState {
   user: User | null
@@ -192,6 +193,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     localDB.setUser(updated)
     set({ user: updated })
+
+    useUserDirectoryStore.getState().setUserProfile(user.id, {
+      id: user.id,
+      name: updated.name,
+      email: user.email,
+    })
 
     if (!user.is_anonymous) {
       try {

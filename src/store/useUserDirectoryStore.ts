@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { db } from '@/lib/firebase/config'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, onSnapshot } from 'firebase/firestore'
 import { useAuthStore } from './useAuthStore'
 
 export interface UserProfile {
@@ -20,17 +20,38 @@ function getInitialCachedUsers(): Record<string, UserProfile> {
   }
 }
 
+// Track active real-time listeners for collaborator profiles
+const activeListeners = new Map<string, () => void>()
+
 interface UserDirectoryState {
   users: Record<string, UserProfile>
-  fetchUsers: (userIds: string[]) => Promise<void>
-  getUserName: (userId?: string | null, showYou?: boolean) => string
+  fetchUsers: (userIds: string[]) => void
+  setUserProfile: (id: string, profile: UserProfile) => void
+  getUserName: (
+    userId?: string | null,
+    showYou?: boolean,
+    fallbackName?: string | null
+  ) => string
 }
 
 export const useUserDirectoryStore = create<UserDirectoryState>((set, get) => ({
   users: getInitialCachedUsers(),
 
-  getUserName: (userId?: string | null, showYou: boolean = false) => {
-    if (!userId) return 'User'
+  setUserProfile: (id: string, profile: UserProfile) => {
+    const current = get().users
+    const updated = { ...current, [id]: profile }
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+    } catch {}
+    set({ users: updated })
+  },
+
+  getUserName: (
+    userId?: string | null,
+    showYou: boolean = false,
+    fallbackName?: string | null
+  ) => {
+    if (!userId) return fallbackName || 'User'
 
     const currentUser = useAuthStore.getState().user
     const isCurrent =
@@ -44,10 +65,15 @@ export const useUserDirectoryStore = create<UserDirectoryState>((set, get) => ({
       return showYou ? `${name} (You)` : name
     }
 
-    // Check cached users
+    // Check cached/live users directory first (always latest profile name)
     const cached = get().users[userId]
     if (cached?.name) {
       return cached.name
+    }
+
+    // If fallbackName is available and not a raw hash
+    if (fallbackName && fallbackName !== userId && !fallbackName.startsWith('guest_') && fallbackName.length < 32) {
+      return fallbackName
     }
 
     // If it's an email address
@@ -61,53 +87,59 @@ export const useUserDirectoryStore = create<UserDirectoryState>((set, get) => ({
       return 'Guest'
     }
 
-    // If it's a long UID, return 'Collaborator' instead of raw UID gibberish
+    // Return Collaborator fallback instead of raw UID gibberish
     return 'Collaborator'
   },
 
-  fetchUsers: async (userIds: string[]) => {
+  fetchUsers: (userIds: string[]) => {
     const currentUser = useAuthStore.getState().user
-    const currentUsers = get().users
 
-    const idsToFetch = Array.from(new Set(userIds)).filter(
+    const idsToListen = Array.from(new Set(userIds)).filter(
       (id) =>
         id &&
         id !== 'guest' &&
         !id.startsWith('guest') &&
         !id.includes('@') &&
-        id !== currentUser?.id &&
-        !currentUsers[id]
+        id !== currentUser?.id
     )
 
-    if (idsToFetch.length === 0) return
+    if (idsToListen.length === 0) return
 
-    const updated = { ...currentUsers }
-    let hasNew = false
+    for (const id of idsToListen) {
+      if (activeListeners.has(id)) continue
 
-    for (const id of idsToFetch) {
       try {
-        const snap = await getDoc(doc(db, 'users', id))
-        if (snap.exists()) {
-          const data = snap.data()
-          if (data?.name) {
-            updated[id] = {
-              id,
-              name: data.name,
-              email: data.email || null,
+        const unsub = onSnapshot(
+          doc(db, 'users', id),
+          (snap) => {
+            if (snap.exists()) {
+              const data = snap.data()
+              if (data?.name) {
+                const profile: UserProfile = {
+                  id,
+                  name: data.name,
+                  email: data.email || null,
+                }
+                const current = get().users
+                // Only update state if name or email changed
+                if (current[id]?.name !== profile.name || current[id]?.email !== profile.email) {
+                  const updated = { ...current, [id]: profile }
+                  try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+                  } catch {}
+                  set({ users: updated })
+                }
+              }
             }
-            hasNew = true
+          },
+          (err) => {
+            console.warn(`Real-time user directory listener error for ${id}:`, err)
           }
-        }
+        )
+        activeListeners.set(id, unsub)
       } catch (e) {
-        console.warn(`Could not fetch profile for user ${id}:`, e)
+        console.warn(`Could not attach listener for user ${id}:`, e)
       }
-    }
-
-    if (hasNew) {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
-      } catch {}
-      set({ users: updated })
     }
   },
 }))

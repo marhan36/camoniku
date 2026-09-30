@@ -32,7 +32,7 @@ export function exportTransactionsToExcel({
   const rows = transactions.map((t, idx) => ({
     No: idx + 1,
     Date: formatDisplayDate(t.transaction_date, dateFormat),
-    Member: t.user_name || getUserName(t.user_id),
+    Member: getUserName(t.user_id, false, t.user_name),
     Classification: classificationMap.get(t.classification_id) || 'Unknown',
     Category: categoryMap.get(t.category_id) || 'Unknown',
     Description: t.description || '-',
