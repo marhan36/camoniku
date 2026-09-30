@@ -40,10 +40,6 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
   const [emailInput, setEmailInput] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null)
-  const [lastInviteResult, setLastInviteResult] = useState<{
-    email: string
-    inviteUrl: string
-  } | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
   // Use live notebook from store so pending invites and member changes update reactively
@@ -91,14 +87,9 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
     if (!targetEmail) return
 
     setIsSubmitting(true)
-    setLastInviteResult(null)
     try {
       const res = await inviteMemberByEmail(liveNotebook.id, targetEmail)
-      if (res.success && res.inviteUrl) {
-        setLastInviteResult({
-          email: targetEmail,
-          inviteUrl: res.inviteUrl,
-        })
+      if (res.success) {
         setEmailInput('')
       }
     } finally {
@@ -192,48 +183,6 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                 Only the notebook owner ({getUserName(liveNotebook.owner_id)}) can invite or remove collaborators.
               </div>
             )}
-
-            {/* Success Dispatched Notification */}
-            {lastInviteResult && (
-              <div className="p-3.5 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs text-emerald-900 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold flex items-center gap-1.5">
-                    <Check className="w-4 h-4 text-emerald-600" />
-                    Invitation dispatched to {lastInviteResult.email}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setLastInviteResult(null)}
-                    className="text-emerald-700 hover:text-emerald-900 text-xs font-medium cursor-pointer"
-                  >
-                    Dismiss
-                  </button>
-                </div>
-                <div className="flex items-center gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => handleCopyLink(lastInviteResult.inviteUrl, 'last_invite')}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-white hover:bg-emerald-100 text-emerald-800 text-[11px] font-semibold rounded-lg border border-emerald-300 transition cursor-pointer"
-                  >
-                    {copiedId === 'last_invite' ? (
-                      <Check className="w-3 h-3 text-emerald-600" />
-                    ) : (
-                      <Copy className="w-3 h-3" />
-                    )}
-                    <span>Copy Confirmation Link</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleOpenMailto(lastInviteResult.email, lastInviteResult.inviteUrl)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold rounded-lg transition cursor-pointer"
-                  >
-                    <ExternalLink className="w-3 h-3" />
-                    <span>Open in Mail Client</span>
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* Current Active Members */}
             <div>
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2.5 flex items-center justify-between">
