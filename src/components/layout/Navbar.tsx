@@ -1,7 +1,6 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useNotebookStore } from '@/store/useNotebookStore'
-import { useAuthStore } from '@/store/useAuthStore'
 import { NetworkStatusIndicator } from '@/components/common/NetworkStatusIndicator'
 import {
   LayoutDashboard,
@@ -11,17 +10,13 @@ import {
   Settings,
   ChevronDown,
   Sparkles,
-  User as UserIcon,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 export const Navbar: React.FC = () => {
   const { t } = useTranslation()
   const location = useLocation()
-  const { notebooks, activeNotebookId, setActiveNotebookId, getActiveNotebook } = useNotebookStore()
-  const { user } = useAuthStore()
-
-  const activeNotebook = getActiveNotebook()
+  const { notebooks, activeNotebookId, setActiveNotebookId } = useNotebookStore()
 
   const navLinks = [
     { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
@@ -89,20 +84,9 @@ export const Navbar: React.FC = () => {
             })}
           </nav>
 
-          {/* Right Header: Network status + User */}
-          <div className="flex items-center gap-2.5">
+          {/* Right Header: Network status */}
+          <div className="flex items-center gap-2.5 shrink-0">
             <NetworkStatusIndicator />
-
-            {/* Profile Avatar indicator */}
-            <Link
-              to="/settings"
-              className="flex items-center gap-1.5 p-1 rounded-xl hover:bg-slate-100 transition"
-              title={user ? `${user.name} (${user.is_anonymous ? 'Offline' : 'Google'})` : 'Account'}
-            >
-              <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs border border-white shadow-2xs">
-                {user?.name ? user.name.slice(0, 2).toUpperCase() : <UserIcon className="w-4 h-4" />}
-              </div>
-            </Link>
           </div>
         </div>
       </header>

@@ -13,11 +13,11 @@ export const NetworkStatusIndicator: React.FC = () => {
   if (user?.is_anonymous || syncStatus === 'local_only') {
     return (
       <div
-        title="Guest Mode: Data stored locally on this device. Sign in with Google to enable cloud sync."
-        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs"
+        title={`${t('sync.local_only')} - Guest Mode: Data stored locally on this device`}
+        className="inline-flex items-center gap-1.5 px-2 py-1 lg:px-2.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs whitespace-nowrap shrink-0"
       >
         <HardDrive className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-        <span>{t('sync.local_only')}</span>
+        <span className="hidden lg:inline whitespace-nowrap">{t('sync.local_only')}</span>
       </div>
     )
   }
@@ -26,11 +26,11 @@ export const NetworkStatusIndicator: React.FC = () => {
   if (!isOnline || syncStatus === 'offline') {
     return (
       <div
-        title="Device is offline. Changes are saved locally and will sync once reconnected."
-        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200"
+        title={`${t('sync.offline')} - Device is offline`}
+        className="inline-flex items-center gap-1.5 px-2 py-1 lg:px-2.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200 shadow-2xs whitespace-nowrap shrink-0"
       >
         <WifiOff className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-        <span>{t('sync.offline')}</span>
+        <span className="hidden lg:inline whitespace-nowrap">{t('sync.offline')}</span>
       </div>
     )
   }
@@ -39,11 +39,11 @@ export const NetworkStatusIndicator: React.FC = () => {
   if (syncStatus === 'syncing') {
     return (
       <div
-        title="Syncing changes with cloud..."
-        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200"
+        title={`${t('sync.syncing')} - Syncing changes with cloud`}
+        className="inline-flex items-center gap-1.5 px-2 py-1 lg:px-2.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs whitespace-nowrap shrink-0"
       >
         <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-600 shrink-0" />
-        <span>{t('sync.syncing')}</span>
+        <span className="hidden lg:inline whitespace-nowrap">{t('sync.syncing')}</span>
       </div>
     )
   }
@@ -51,11 +51,11 @@ export const NetworkStatusIndicator: React.FC = () => {
   // 4. Authenticated & fully synced
   return (
     <div
-      title="All changes synced to cloud"
-      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"
+      title={`${t('sync.synced')} - All changes synced to cloud`}
+      className="inline-flex items-center gap-1.5 px-2 py-1 lg:px-2.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs whitespace-nowrap shrink-0"
     >
       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-      <span className="hidden sm:inline">{t('sync.synced')}</span>
+      <span className="hidden lg:inline whitespace-nowrap">{t('sync.synced')}</span>
     </div>
   )
 }
