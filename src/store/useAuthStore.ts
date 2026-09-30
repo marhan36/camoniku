@@ -1,0 +1,213 @@
+import { create } from 'zustand'
+import { User } from '@/types'
+import { auth, googleProvider, signInWithPopup, firebaseSignOut, db } from '@/lib/firebase/config'
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'
+import { localDB } from '@/lib/storage/localStorage'
+import { generateDefaultData } from '@/utils/dummyData'
+import { toast } from 'sonner'
+import i18n from '@/i18n'
+
+interface AuthState {
+  user: User | null
+  isLoading: boolean
+  isInitialized: boolean
+  setUser: (user: User | null) => void
+  loginWithGoogle: () => Promise<User | null>
+  continueAsGuest: (name: string) => User
+  updateProfileName: (name: string) => Promise<void>
+  logout: () => Promise<void>
+  initAuth: () => Promise<void>
+}
+
+export const useAuthStore = create<AuthState>((set, get) => ({
+  user: null,
+  isLoading: true,
+  isInitialized: false,
+
+  setUser: (user) => {
+    localDB.setUser(user)
+    set({ user })
+  },
+
+  continueAsGuest: (name: string) => {
+    const now = new Date().toISOString()
+    const guestUser: User = {
+      id: `guest_${crypto.randomUUID().slice(0, 8)}`,
+      name: name.trim() || 'Guest User',
+      email: null,
+      active_notebook_id: null,
+      created_at: now,
+      updated_at: now,
+      is_anonymous: true,
+    }
+
+    // Check if notebooks already exist in localDB
+    let notebooks = localDB.getNotebooks()
+    if (notebooks.length === 0) {
+      const defaultData = generateDefaultData(guestUser)
+      guestUser.active_notebook_id = defaultData.notebook.id
+      notebooks = [defaultData.notebook]
+
+      localDB.setNotebooks(notebooks)
+      localDB.setClassifications(defaultData.classifications)
+      localDB.setCategories(defaultData.categories)
+      localDB.setTransactions(defaultData.transactions)
+      localDB.setActiveNotebookId(defaultData.notebook.id)
+    } else {
+      guestUser.active_notebook_id = localDB.getActiveNotebookId() || notebooks[0].id
+    }
+
+    localDB.setUser(guestUser)
+    set({ user: guestUser, isLoading: false })
+    toast.success(`${i18n.t('auth.logged_in_as')} ${guestUser.name}`)
+    return guestUser
+  },
+
+  loginWithGoogle: async () => {
+    set({ isLoading: true })
+    try {
+      const result = await signInWithPopup(auth, googleProvider)
+      const fbUser = result.user
+      const now = new Date().toISOString()
+
+      const userDocRef = doc(db, 'users', fbUser.uid)
+      const userSnap = await getDoc(userDocRef)
+
+      let userData: User
+
+      if (userSnap.exists()) {
+        userData = userSnap.data() as User
+      } else {
+        // New user
+        userData = {
+          id: fbUser.uid,
+          name: fbUser.displayName || 'CamoniKu User',
+          email: fbUser.email,
+          active_notebook_id: null,
+          created_at: now,
+          updated_at: now,
+          is_anonymous: false,
+        }
+
+        // Migrate local guest data if exists, otherwise generate default onboarding data
+        const localNotebooks = localDB.getNotebooks()
+        const isGuestPrev = get().user?.is_anonymous || (!get().user && localNotebooks.length > 0)
+
+        if (isGuestPrev && localNotebooks.length > 0) {
+          // Re-assign local guest notebooks to this Google account
+          const migratedNotebooks = localNotebooks.map((nb) => ({
+            ...nb,
+            owner_id: fbUser.uid,
+            member_ids: Array.from(new Set([...nb.member_ids, fbUser.uid])),
+          }))
+          const localTransactions = localDB.getTransactions().map((t) => ({
+            ...t,
+            user_id: fbUser.uid,
+          }))
+
+          localDB.setNotebooks(migratedNotebooks)
+          localDB.setTransactions(localTransactions)
+
+          // Save migrated data to Firestore
+          try {
+            for (const nb of migratedNotebooks) {
+              await setDoc(doc(db, 'notebooks', nb.id), nb)
+            }
+            for (const c of localDB.getClassifications()) {
+              await setDoc(doc(db, 'classifications', c.id), c)
+            }
+            for (const cat of localDB.getCategories()) {
+              await setDoc(doc(db, 'categories', cat.id), cat)
+            }
+            for (const tx of localTransactions) {
+              await setDoc(doc(db, 'transactions', tx.id), tx)
+            }
+          } catch (syncErr) {
+            console.warn('Initial firestore migration warning:', syncErr)
+          }
+
+          userData.active_notebook_id = migratedNotebooks[0]?.id || null
+        } else {
+          // Fresh Google user, generate default onboarding notebook
+          const defaultData = generateDefaultData(userData)
+          userData.active_notebook_id = defaultData.notebook.id
+
+          try {
+            await setDoc(doc(db, 'notebooks', defaultData.notebook.id), defaultData.notebook)
+            for (const c of defaultData.classifications) {
+              await setDoc(doc(db, 'classifications', c.id), c)
+            }
+            for (const cat of defaultData.categories) {
+              await setDoc(doc(db, 'categories', cat.id), cat)
+            }
+            for (const tx of defaultData.transactions) {
+              await setDoc(doc(db, 'transactions', tx.id), tx)
+            }
+          } catch (syncErr) {
+            console.warn('Firestore initial notebook creation warning:', syncErr)
+          }
+
+          localDB.setNotebooks([defaultData.notebook])
+          localDB.setClassifications(defaultData.classifications)
+          localDB.setCategories(defaultData.categories)
+          localDB.setTransactions(defaultData.transactions)
+          localDB.setActiveNotebookId(defaultData.notebook.id)
+        }
+
+        await setDoc(userDocRef, userData)
+      }
+
+      localDB.setUser(userData)
+      set({ user: userData, isLoading: false })
+      toast.success(`${i18n.t('auth.logged_in_as')} ${userData.name}`)
+      return userData
+    } catch (err: unknown) {
+      console.error('Google Sign-in Error:', err)
+      set({ isLoading: false })
+      const errorMsg = (err as Error)?.message || 'Google sign-in failed'
+      toast.error(errorMsg)
+      return null
+    }
+  },
+
+  updateProfileName: async (name: string) => {
+    const user = get().user
+    if (!user) return
+    const updated = { ...user, name: name.trim(), updated_at: new Date().toISOString() }
+
+    localDB.setUser(updated)
+    set({ user: updated })
+
+    if (!user.is_anonymous) {
+      try {
+        const userDocRef = doc(db, 'users', user.id)
+        await updateDoc(userDocRef, { name: updated.name, updated_at: updated.updated_at })
+      } catch (e) {
+        console.error('Error updating firestore user name:', e)
+      }
+    }
+    toast.success(i18n.t('toasts.profile_updated'))
+  },
+
+  logout: async () => {
+    try {
+      await firebaseSignOut(auth)
+    } catch (e) {
+      console.warn('Firebase signout:', e)
+    }
+    localDB.setUser(null)
+    set({ user: null })
+  },
+
+  initAuth: async () => {
+    // Check local user first
+    const savedUser = localDB.getUser()
+    if (savedUser) {
+      set({ user: savedUser, isLoading: false, isInitialized: true })
+      return
+    }
+
+    // Otherwise, listen for firebase auth state
+    set({ isLoading: false, isInitialized: true })
+  },
+}))

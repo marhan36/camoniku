@@ -1,0 +1,234 @@
+import React, { useState } from 'react'
+import { useNotebookStore } from '@/store/useNotebookStore'
+import { useAuthStore } from '@/store/useAuthStore'
+import { useTransactionStore } from '@/store/useTransactionStore'
+import { Notebook } from '@/types'
+import { NotebookModal } from '@/components/modals/NotebookModal'
+import { InviteMemberModal } from '@/components/modals/InviteMemberModal'
+import { ConfirmModal } from '@/components/common/ConfirmModal'
+import { EmptyState } from '@/components/common/EmptyState'
+import {
+  BookOpen,
+  Plus,
+  Users,
+  Edit2,
+  Trash2,
+  CheckCircle2,
+  Shield,
+  Receipt,
+  User as UserIcon,
+} from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+
+export const NotebooksPage: React.FC = () => {
+  const { t } = useTranslation()
+  const { user } = useAuthStore()
+  const { notebooks, activeNotebookId, setActiveNotebookId, deleteNotebook } = useNotebookStore()
+  const { transactions } = useTransactionStore()
+
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [editingNotebook, setEditingNotebook] = useState<Notebook | null>(null)
+  const [managingMembersNotebook, setManagingMembersNotebook] = useState<Notebook | null>(null)
+  const [deletingNotebookId, setDeletingNotebookId] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingNotebookId) return
+    setIsDeleting(true)
+    try {
+      await deleteNotebook(deletingNotebookId)
+    } finally {
+      setIsDeleting(false)
+      setDeletingNotebookId(null)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+            {t('notebooks.title')}
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5">{t('notebooks.subtitle')}</p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setIsAddModalOpen(true)}
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-semibold shadow-xs transition cursor-pointer self-start sm:self-auto"
+        >
+          <Plus className="w-4 h-4" />
+          <span>{t('notebooks.create_notebook')}</span>
+        </button>
+      </div>
+
+      {/* Notebooks List */}
+      {notebooks.length === 0 ? (
+        <EmptyState
+          icon={BookOpen}
+          title={t('notebooks.no_notebooks')}
+          description="Create your first notebook to organize transactions into separate workspaces."
+          actionLabel={t('notebooks.create_notebook')}
+          onAction={() => setIsAddModalOpen(true)}
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {notebooks.map((nb) => {
+            const isActive = nb.id === activeNotebookId
+            const isOwner = user?.id === nb.owner_id || !user
+            const txCount = transactions.filter((t) => t.notebook_id === nb.id).length
+            const memberCount = nb.member_ids?.length || 1
+
+            return (
+              <div
+                key={nb.id}
+                className={`bg-white rounded-3xl p-6 border transition-all flex flex-col justify-between shadow-xs ${
+                  isActive
+                    ? 'border-indigo-400 ring-2 ring-indigo-100 shadow-indigo-100/50'
+                    : 'border-slate-100 hover:border-slate-300'
+                }`}
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+                        <BookOpen className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-slate-900 leading-tight">
+                          {nb.name}
+                        </h3>
+                        <span className="inline-block px-2 py-0.5 mt-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600">
+                          {nb.currency}
+                        </span>
+                      </div>
+                    </div>
+
+                    {isActive && (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>{t('notebooks.active')}</span>
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Metadata Stats */}
+                  <div className="mt-5 grid grid-cols-2 gap-2 text-xs text-slate-500 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                    <div className="flex items-center gap-1.5">
+                      <Receipt className="w-4 h-4 text-slate-400" />
+                      <span>{txCount} transactions</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Users className="w-4 h-4 text-slate-400" />
+                      <span>{memberCount} members</span>
+                    </div>
+                  </div>
+
+                  {/* Role Badge */}
+                  <div className="mt-3 flex items-center justify-between text-xs">
+                    <span className="text-slate-400">Your role:</span>
+                    <span className="font-semibold text-slate-700 flex items-center gap-1">
+                      {isOwner ? (
+                        <>
+                          <Shield className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>{t('notebooks.role_owner')}</span>
+                        </>
+                      ) : (
+                        <>
+                          <UserIcon className="w-3.5 h-3.5 text-slate-500" />
+                          <span>{t('notebooks.role_member')}</span>
+                        </>
+                      )}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Bottom Actions */}
+                <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
+                  {!isActive ? (
+                    <button
+                      type="button"
+                      onClick={() => setActiveNotebookId(nb.id)}
+                      className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition cursor-pointer"
+                    >
+                      {t('notebooks.set_active')}
+                    </button>
+                  ) : (
+                    <span className="text-xs text-slate-400 font-medium">Current Workspace</span>
+                  )}
+
+                  <div className="flex items-center gap-1 ml-auto">
+                    {/* Invite / Manage Members */}
+                    <button
+                      type="button"
+                      onClick={() => setManagingMembersNotebook(nb)}
+                      className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition cursor-pointer"
+                      title={t('notebooks.manage_members')}
+                    >
+                      <Users className="w-4 h-4" />
+                    </button>
+
+                    {/* Edit Notebook (Owner only) */}
+                    {isOwner && (
+                      <button
+                        type="button"
+                        onClick={() => setEditingNotebook(nb)}
+                        className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition cursor-pointer"
+                        title={t('notebooks.edit')}
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                    )}
+
+                    {/* Delete Notebook (Owner only, if more than 1 notebook exists) */}
+                    {isOwner && notebooks.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setDeletingNotebookId(nb.id)}
+                        className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                        title={t('notebooks.delete')}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Add / Edit Notebook Modal */}
+      <NotebookModal
+        isOpen={isAddModalOpen || !!editingNotebook}
+        notebookToEdit={editingNotebook}
+        onClose={() => {
+          setIsAddModalOpen(false)
+          setEditingNotebook(null)
+        }}
+      />
+
+      {/* Invite / Manage Members Modal */}
+      <InviteMemberModal
+        isOpen={!!managingMembersNotebook}
+        notebook={managingMembersNotebook}
+        onClose={() => setManagingMembersNotebook(null)}
+      />
+
+      {/* Delete Confirmation Modal (NEVER native window.confirm) */}
+      <ConfirmModal
+        isOpen={!!deletingNotebookId}
+        title={t('modals.confirm_delete_title')}
+        message={t('notebooks.delete_warning')}
+        confirmText={t('modals.confirm')}
+        cancelText={t('modals.cancel')}
+        isLoading={isDeleting}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeletingNotebookId(null)}
+      />
+    </div>
+  )
+}
