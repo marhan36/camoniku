@@ -16,7 +16,7 @@ interface NotebookState {
   setNotebooks: (notebooks: Notebook[]) => void
   setActiveNotebookId: (id: string) => void
   getActiveNotebook: () => Notebook | null
-  createNotebook: (name: string, currency: string) => Promise<Notebook>
+  createNotebook: (name: string, currency: string, setAsActive?: boolean) => Promise<Notebook>
   updateNotebook: (id: string, updates: Partial<Notebook>) => Promise<void>
   deleteNotebook: (id: string) => Promise<void>
   inviteMember: (notebookId: string, memberIdOrEmail: string) => Promise<boolean>
@@ -57,7 +57,7 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
     return notebooks.find((n) => n.id === activeNotebookId) || notebooks[0] || null
   },
 
-  createNotebook: async (name: string, currency: string) => {
+  createNotebook: async (name: string, currency: string, setAsActive: boolean = true) => {
     const user = useAuthStore.getState().user
     const userId = user?.id || 'guest'
     const now = new Date().toISOString()
@@ -77,8 +77,8 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
     const defaultClass = getDefaultClassifications(newNotebook.id, lang)
     const defaultCats = getDefaultCategories(newNotebook.id, lang)
 
-    const currentClass = localDB.getClassifications()
-    const currentCats = localDB.getCategories()
+    const currentClass = localDB.getClassifications().filter((c) => c.notebook_id !== newNotebook.id)
+    const currentCats = localDB.getCategories().filter((c) => c.notebook_id !== newNotebook.id)
     const updatedClass = [...currentClass, ...defaultClass]
     const updatedCats = [...currentCats, ...defaultCats]
 
@@ -89,8 +89,13 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
 
     const updatedNotebooks = [...get().notebooks, newNotebook]
     localDB.setNotebooks(updatedNotebooks)
-    localDB.setActiveNotebookId(newNotebook.id)
-    set({ notebooks: updatedNotebooks, activeNotebookId: newNotebook.id })
+
+    if (setAsActive) {
+      localDB.setActiveNotebookId(newNotebook.id)
+      set({ notebooks: updatedNotebooks, activeNotebookId: newNotebook.id })
+    } else {
+      set({ notebooks: updatedNotebooks })
+    }
 
     if (user && !user.is_anonymous) {
       try {
@@ -100,6 +105,9 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
         }
         for (const cat of defaultCats) {
           await setDoc(doc(db, 'categories', cat.id), cat)
+        }
+        if (setAsActive) {
+          await updateDoc(doc(db, 'users', user.id), { active_notebook_id: newNotebook.id })
         }
       } catch (e) {
         console.warn('Error syncing created notebook to Firestore:', e)
@@ -136,9 +144,27 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
     const notebook = get().notebooks.find((n) => n.id === id)
     if (!notebook) return
 
+    const isOwner = user
+      ? notebook.owner_id === user.id ||
+        (user.is_anonymous && (notebook.owner_id === 'guest' || notebook.owner_id === user.id))
+      : true
+
     // Role check: Only owner can delete notebook
-    if (user && !user.is_anonymous && notebook.owner_id !== user.id) {
+    if (!isOwner) {
       toast.error('Only the notebook owner can delete it.')
+      return
+    }
+
+    // Must keep at least 1 owned notebook
+    const ownedNotebooks = get().notebooks.filter((n) =>
+      user
+        ? n.owner_id === user.id ||
+          (user.is_anonymous && (n.owner_id === 'guest' || n.owner_id === user.id))
+        : true
+    )
+
+    if (ownedNotebooks.length <= 1) {
+      toast.error(i18n.t('notebooks.keep_at_least_one', 'You must keep at least 1 notebook that you own.'))
       return
     }
 
@@ -153,10 +179,29 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
     localDB.setTransactions(remainingTx)
     localDB.setClassifications(remainingClass)
     localDB.setCategories(remainingCat)
+    useMetadataStore.getState().setClassifications(remainingClass)
+    useMetadataStore.getState().setCategories(remainingCat)
 
-    // Update active notebook id
-    const newActiveId = updatedNotebooks[0]?.id || null
-    localDB.setActiveNotebookId(newActiveId)
+    // Update active notebook id if current active was deleted
+    let newActiveId = get().activeNotebookId
+    if (newActiveId === id) {
+      const remainingOwned = updatedNotebooks.filter((n) =>
+        user
+          ? n.owner_id === user.id ||
+            (user.is_anonymous && (n.owner_id === 'guest' || n.owner_id === user.id))
+          : true
+      )
+      newActiveId = remainingOwned[0]?.id || updatedNotebooks[0]?.id || null
+      localDB.setActiveNotebookId(newActiveId)
+      if (user && !user.is_anonymous && newActiveId) {
+        try {
+          updateDoc(doc(db, 'users', user.id), { active_notebook_id: newActiveId })
+        } catch (e) {
+          console.warn('Update user active notebook error:', e)
+        }
+      }
+    }
+
     set({ notebooks: updatedNotebooks, activeNotebookId: newActiveId })
 
     if (user && !user.is_anonymous) {

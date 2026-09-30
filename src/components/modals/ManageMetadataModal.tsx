@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Notebook, Classification, Category } from '@/types'
 import { useMetadataStore } from '@/store/useMetadataStore'
 import { ConfirmModal } from '@/components/common/ConfirmModal'
@@ -35,6 +35,7 @@ export const ManageMetadataModal: React.FC<ManageMetadataModalProps> = ({
     addCategory,
     deleteClassification,
     deleteCategory,
+    ensureNotebookMetadata,
   } = useMetadataStore()
 
   const [activeTab, setActiveTab] = useState<'classifications' | 'categories'>('classifications')
@@ -46,6 +47,12 @@ export const ManageMetadataModal: React.FC<ManageMetadataModalProps> = ({
     type: 'classification' | 'category'
   } | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  useEffect(() => {
+    if (isOpen && notebook?.id) {
+      ensureNotebookMetadata(notebook.id)
+    }
+  }, [isOpen, notebook?.id, ensureNotebookMetadata])
 
   if (!isOpen || !notebook) return null
 

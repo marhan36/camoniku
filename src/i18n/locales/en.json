@@ -116,7 +116,8 @@
     "role_owner": "Owner",
     "role_member": "Member",
     "no_notebooks": "No notebooks available",
-    "delete_warning": "Are you sure you want to delete this notebook? All its transactions and categories will be permanently removed."
+    "delete_warning": "Are you sure you want to delete this notebook? All its transactions and categories will be permanently removed.",
+    "keep_at_least_one": "You must keep at least 1 notebook that you own."
   },
   "settings": {
     "title": "Settings",

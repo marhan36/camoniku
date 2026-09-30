@@ -46,6 +46,14 @@ export const NotebooksPage: React.FC = () => {
     }
   }
 
+  const isNotebookOwner = (nb: Notebook) => {
+    if (!user) return true
+    if (user.is_anonymous) return nb.owner_id === 'guest' || nb.owner_id === user.id
+    return nb.owner_id === user.id
+  }
+
+  const ownedNotebooksCount = notebooks.filter(isNotebookOwner).length
+
   return (
     <div className="space-y-6">
       {/* Top Header */}
@@ -80,7 +88,7 @@ export const NotebooksPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {notebooks.map((nb) => {
             const isActive = nb.id === activeNotebookId
-            const isOwner = user?.id === nb.owner_id || !user
+            const isOwner = isNotebookOwner(nb)
             const txCount = transactions.filter((t) => t.notebook_id === nb.id).length
             const memberCount = nb.member_ids?.length || 1
 
@@ -195,8 +203,8 @@ export const NotebooksPage: React.FC = () => {
                       </button>
                     )}
 
-                    {/* Delete Notebook (Owner only, if more than 1 notebook exists) */}
-                    {isOwner && notebooks.length > 1 && (
+                    {/* Delete Notebook (Owner only, must keep at least 1 owned notebook) */}
+                    {isOwner && ownedNotebooksCount > 1 && (
                       <button
                         type="button"
                         onClick={() => setDeletingNotebookId(nb.id)}

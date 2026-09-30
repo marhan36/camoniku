@@ -116,7 +116,8 @@
     "role_owner": "Pemilik",
     "role_member": "Anggota",
     "no_notebooks": "Tidak ada buku catatan",
-    "delete_warning": "Apakah Anda yakin ingin menghapus buku catatan ini? Seluruh transaksi dan kategorinya akan dihapus permanen."
+    "delete_warning": "Apakah Anda yakin ingin menghapus buku catatan ini? Seluruh transaksi dan kategorinya akan dihapus permanen.",
+    "keep_at_least_one": "Anda harus menyisakan setidaknya 1 buku catatan milik Anda."
   },
   "settings": {
     "title": "Pengaturan",

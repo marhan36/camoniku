@@ -60,10 +60,7 @@ export const NotebookModal: React.FC<NotebookModalProps> = ({
           setActiveNotebookId(notebookToEdit.id)
         }
       } else {
-        const created = await createNotebook(trimmed, currency)
-        if (setAsActive && created) {
-          setActiveNotebookId(created.id)
-        }
+        await createNotebook(trimmed, currency, setAsActive)
       }
       onClose()
     } finally {

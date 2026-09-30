@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { Classification, Category } from '@/types'
 import { localDB } from '@/lib/storage/localStorage'
 import { db } from '@/lib/firebase/config'
-import { doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore'
+import { collection, query, where, getDocs, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore'
 import { useAuthStore } from './useAuthStore'
 import { normalizeString } from '@/utils/normalize'
 import { toast } from 'sonner'
@@ -15,6 +15,9 @@ interface MetadataState {
   isLoading: boolean
   setClassifications: (items: Classification[]) => void
   setCategories: (items: Category[]) => void
+  syncNotebookClassifications: (notebookId: string, items: Classification[]) => void
+  syncNotebookCategories: (notebookId: string, items: Category[]) => void
+  ensureNotebookMetadata: (notebookId: string, lang?: 'en' | 'id') => Promise<void>
   addClassification: (notebookId: string, name: string) => Promise<Classification | null>
   addCategory: (notebookId: string, name: string) => Promise<Category | null>
   updateClassification: (id: string, name: string) => Promise<boolean>
@@ -37,6 +40,97 @@ export const useMetadataStore = create<MetadataState>((set, get) => ({
   setCategories: (categories) => {
     localDB.setCategories(categories)
     set({ categories })
+  },
+
+  syncNotebookClassifications: (notebookId: string, items: Classification[]) => {
+    const current = get().classifications
+    const others = current.filter((c) => c.notebook_id !== notebookId)
+    const updated = [...others, ...items]
+    localDB.setClassifications(updated)
+    set({ classifications: updated })
+  },
+
+  syncNotebookCategories: (notebookId: string, items: Category[]) => {
+    const current = get().categories
+    const others = current.filter((c) => c.notebook_id !== notebookId)
+    const updated = [...others, ...items]
+    localDB.setCategories(updated)
+    set({ categories: updated })
+  },
+
+  ensureNotebookMetadata: async (notebookId: string, lang?: 'en' | 'id') => {
+    if (!notebookId) return
+
+    const language = lang || ((localDB.getSettings().language || 'en') as 'en' | 'id')
+    const user = useAuthStore.getState().user
+
+    // First check local/store
+    const existingClass = get().classifications.filter((c) => c.notebook_id === notebookId)
+    const existingCats = get().categories.filter((c) => c.notebook_id === notebookId)
+
+    if (existingClass.length > 0 && existingCats.length > 0) {
+      return
+    }
+
+    // If logged in with Google, check Firestore first before creating defaults
+    if (user && !user.is_anonymous) {
+      try {
+        const classRef = collection(db, 'classifications')
+        const qClass = query(classRef, where('notebook_id', '==', notebookId))
+        const classSnap = await getDocs(qClass)
+        const fsClass: Classification[] = []
+        classSnap.forEach((d) => fsClass.push(d.data() as Classification))
+
+        const catRef = collection(db, 'categories')
+        const qCat = query(catRef, where('notebook_id', '==', notebookId))
+        const catSnap = await getDocs(qCat)
+        const fsCats: Category[] = []
+        catSnap.forEach((d) => fsCats.push(d.data() as Category))
+
+        if (fsClass.length > 0 || fsCats.length > 0) {
+          if (fsClass.length > 0) get().syncNotebookClassifications(notebookId, fsClass)
+          if (fsCats.length > 0) get().syncNotebookCategories(notebookId, fsCats)
+          return
+        }
+      } catch (e) {
+        console.warn('Error fetching metadata from Firestore in ensureNotebookMetadata:', e)
+      }
+    }
+
+    // If still missing, generate defaults
+    let updatedClass = get().classifications
+    let updatedCats = get().categories
+    let toSaveClass: Classification[] = []
+    let toSaveCats: Category[] = []
+
+    if (get().classifications.filter((c) => c.notebook_id === notebookId).length === 0) {
+      toSaveClass = getDefaultClassifications(notebookId, language)
+      updatedClass = [...updatedClass.filter((c) => c.notebook_id !== notebookId), ...toSaveClass]
+    }
+
+    if (get().categories.filter((c) => c.notebook_id === notebookId).length === 0) {
+      toSaveCats = getDefaultCategories(notebookId, language)
+      updatedCats = [...updatedCats.filter((c) => c.notebook_id !== notebookId), ...toSaveCats]
+    }
+
+    if (toSaveClass.length > 0 || toSaveCats.length > 0) {
+      localDB.setClassifications(updatedClass)
+      localDB.setCategories(updatedCats)
+      set({ classifications: updatedClass, categories: updatedCats })
+
+      if (user && !user.is_anonymous) {
+        try {
+          for (const c of toSaveClass) {
+            await setDoc(doc(db, 'classifications', c.id), c)
+          }
+          for (const cat of toSaveCats) {
+            await setDoc(doc(db, 'categories', cat.id), cat)
+          }
+        } catch (e) {
+          console.warn('Error saving generated default metadata to Firestore:', e)
+        }
+      }
+    }
   },
 
   addClassification: async (notebookId: string, name: string) => {

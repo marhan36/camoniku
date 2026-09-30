@@ -11,7 +11,7 @@ import { Notebook, Classification, Category, Transaction } from '@/types'
 export function useSync() {
   const { user } = useAuthStore()
   const { activeNotebookId, setNotebooks } = useNotebookStore()
-  const { setClassifications, setCategories } = useMetadataStore()
+  const { syncNotebookClassifications, syncNotebookCategories, ensureNotebookMetadata } = useMetadataStore()
   const { setTransactions } = useTransactionStore()
   const { setOnline, setSyncStatus } = useNetworkStore()
 
@@ -88,10 +88,14 @@ export function useSync() {
     const qClass = query(classRef, where('notebook_id', '==', activeNotebookId))
     const unsubClass = onSnapshot(
       qClass,
-      (snapshot) => {
+      async (snapshot) => {
         const items: Classification[] = []
         snapshot.forEach((d) => items.push(d.data() as Classification))
-        if (items.length > 0) setClassifications(items)
+        if (items.length > 0) {
+          syncNotebookClassifications(activeNotebookId, items)
+        } else {
+          await ensureNotebookMetadata(activeNotebookId)
+        }
       },
       (e) => console.warn('Classifications sync error:', e)
     )
@@ -101,10 +105,14 @@ export function useSync() {
     const qCat = query(catRef, where('notebook_id', '==', activeNotebookId))
     const unsubCat = onSnapshot(
       qCat,
-      (snapshot) => {
+      async (snapshot) => {
         const items: Category[] = []
         snapshot.forEach((d) => items.push(d.data() as Category))
-        if (items.length > 0) setCategories(items)
+        if (items.length > 0) {
+          syncNotebookCategories(activeNotebookId, items)
+        } else {
+          await ensureNotebookMetadata(activeNotebookId)
+        }
       },
       (e) => console.warn('Categories sync error:', e)
     )
@@ -131,5 +139,13 @@ export function useSync() {
       unsubCat()
       unsubTx()
     }
-  }, [user, activeNotebookId, setClassifications, setCategories, setTransactions, setSyncStatus])
+  }, [
+    user,
+    activeNotebookId,
+    syncNotebookClassifications,
+    syncNotebookCategories,
+    ensureNotebookMetadata,
+    setTransactions,
+    setSyncStatus,
+  ])
 }
