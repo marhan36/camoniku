@@ -15,11 +15,7 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-interface NavbarProps {
-  onOpenAddTransaction: () => void
-}
-
-export const Navbar: React.FC<NavbarProps> = ({ onOpenAddTransaction }) => {
+export const Navbar: React.FC = () => {
   const { t } = useTranslation()
   const location = useLocation()
   const { notebooks, activeNotebookId, setActiveNotebookId, getActiveNotebook } = useNotebookStore()
@@ -93,17 +89,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAddTransaction }) => {
             })}
           </nav>
 
-          {/* Right Header: Network status + Add button + User */}
+          {/* Right Header: Network status + User */}
           <div className="flex items-center gap-2.5">
             <NetworkStatusIndicator />
-
-            <button
-              type="button"
-              onClick={onOpenAddTransaction}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer"
-            >
-              <span>+ {t('dashboard.add_transaction')}</span>
-            </button>
 
             {/* Profile Avatar indicator */}
             <Link
