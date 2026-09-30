@@ -180,8 +180,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (err: unknown) {
       console.error('Google Sign-in Error:', err)
       set({ isLoading: false })
-      const errorMsg = (err as Error)?.message || 'Google sign-in failed'
-      toast.error(errorMsg)
+      const authError = err as { code?: string; message?: string }
+      if (authError?.code === 'auth/unauthorized-domain') {
+        const domain = window.location.hostname
+        toast.error(
+          `Domain "${domain}" is not authorized in Firebase. Please add "${domain}" in Firebase Console > Authentication > Settings > Authorized domains.`,
+          { duration: 12000 }
+        )
+      } else if (authError?.code === 'auth/popup-closed-by-user') {
+        toast.info('Google sign-in popup was closed before completing.')
+      } else if (authError?.code === 'auth/popup-blocked') {
+        toast.error('Google sign-in popup was blocked by browser. Please allow popups for this site.')
+      } else {
+        const errorMsg = authError?.message || 'Google sign-in failed'
+        toast.error(errorMsg)
+      }
       return null
     }
   },

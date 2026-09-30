@@ -7,6 +7,7 @@ import { useTransactionStore } from '@/store/useTransactionStore'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { Skeleton } from '@/components/common/SkeletonLoader'
+import { Toaster } from 'sonner'
 
 // Pages
 import { AuthPage } from '@/pages/AuthPage'
@@ -72,6 +73,8 @@ export function App() {
   return (
     <ErrorBoundary>
       <HashRouter>
+        {/* Global Toast notifications */}
+        <Toaster position="top-right" richColors closeButton expand={true} visibleToasts={5} />
         <Routes>
           {/* Public Authentication Route */}
           <Route
