@@ -1,7 +1,49 @@
 import { Notebook, Classification, Category, Transaction, User } from '@/types'
 import { format, subDays } from 'date-fns'
 
-export function generateDefaultData(user: User): {
+export function getDefaultClassifications(notebookId: string, lang: 'en' | 'id' = 'en'): Classification[] {
+  const now = new Date().toISOString()
+  const isId = lang === 'id'
+
+  return [
+    {
+      id: crypto.randomUUID(),
+      notebook_id: notebookId,
+      name: isId ? 'Rumah Tangga' : 'Household',
+      is_active: true,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: crypto.randomUUID(),
+      notebook_id: notebookId,
+      name: isId ? 'Pribadi' : 'Personal',
+      is_active: true,
+      created_at: now,
+      updated_at: now,
+    },
+  ]
+}
+
+export function getDefaultCategories(notebookId: string, lang: 'en' | 'id' = 'en'): Category[] {
+  const now = new Date().toISOString()
+  const isId = lang === 'id'
+
+  const names = isId
+    ? ['Transportasi', 'Makanan & Minuman', 'Tagihan & Utilitas', 'Belanja Harian', 'Hiburan']
+    : ['Transportation', 'F&B', 'Bills & Utilities', 'Groceries', 'Entertainment']
+
+  return names.map((name) => ({
+    id: crypto.randomUUID(),
+    notebook_id: notebookId,
+    name,
+    is_active: true,
+    created_at: now,
+    updated_at: now,
+  }))
+}
+
+export function generateDefaultData(user: User, lang: 'en' | 'id' = 'en'): {
   notebook: Notebook
   classifications: Classification[]
   categories: Category[]
@@ -10,10 +52,11 @@ export function generateDefaultData(user: User): {
   const notebookId = crypto.randomUUID()
   const now = new Date().toISOString()
   const today = format(new Date(), 'yyyy-MM-dd')
+  const isId = lang === 'id'
 
   const notebook: Notebook = {
     id: notebookId,
-    name: 'My Expenses',
+    name: isId ? 'Catatan Pengeluaran' : 'My Expenses',
     currency: 'IDR',
     owner_id: user.id,
     member_ids: [user.id],
@@ -21,74 +64,18 @@ export function generateDefaultData(user: User): {
     updated_at: now,
   }
 
-  // Pre-made classifications
-  const classHousehold: Classification = {
-    id: crypto.randomUUID(),
-    notebook_id: notebookId,
-    name: 'Household',
-    is_active: true,
-    created_at: now,
-    updated_at: now,
-  }
+  // Pre-made classifications based on language
+  const classifications = getDefaultClassifications(notebookId, lang)
+  const classHousehold = classifications[0]
+  const classPersonal = classifications[1]
 
-  const classPersonal: Classification = {
-    id: crypto.randomUUID(),
-    notebook_id: notebookId,
-    name: 'Personal',
-    is_active: true,
-    created_at: now,
-    updated_at: now,
-  }
-
-  const classifications = [classHousehold, classPersonal]
-
-  // Pre-made categories
-  const catTransport: Category = {
-    id: crypto.randomUUID(),
-    notebook_id: notebookId,
-    name: 'Transportation',
-    is_active: true,
-    created_at: now,
-    updated_at: now,
-  }
-
-  const catFnB: Category = {
-    id: crypto.randomUUID(),
-    notebook_id: notebookId,
-    name: 'F&B',
-    is_active: true,
-    created_at: now,
-    updated_at: now,
-  }
-
-  const catBills: Category = {
-    id: crypto.randomUUID(),
-    notebook_id: notebookId,
-    name: 'Bills & Utilities',
-    is_active: true,
-    created_at: now,
-    updated_at: now,
-  }
-
-  const catGroceries: Category = {
-    id: crypto.randomUUID(),
-    notebook_id: notebookId,
-    name: 'Groceries',
-    is_active: true,
-    created_at: now,
-    updated_at: now,
-  }
-
-  const catEntertainment: Category = {
-    id: crypto.randomUUID(),
-    notebook_id: notebookId,
-    name: 'Entertainment',
-    is_active: true,
-    created_at: now,
-    updated_at: now,
-  }
-
-  const categories = [catTransport, catFnB, catBills, catGroceries, catEntertainment]
+  // Pre-made categories based on language
+  const categories = getDefaultCategories(notebookId, lang)
+  const catTransport = categories[0]
+  const catFnB = categories[1]
+  const catBills = categories[2]
+  const catGroceries = categories[3]
+  const catEntertainment = categories[4]
 
   // Pre-filled dummy transactions for onboarding & charts
   const transactions: Transaction[] = [
@@ -99,7 +86,7 @@ export function generateDefaultData(user: User): {
       classification_id: classHousehold.id,
       category_id: catBills.id,
       amount: 450000,
-      description: 'Electricity & Internet Bill',
+      description: isId ? 'Tagihan Listrik & Internet' : 'Electricity & Internet Bill',
       transaction_date: today,
       created_at: now,
       updated_at: now,
@@ -111,7 +98,7 @@ export function generateDefaultData(user: User): {
       classification_id: classHousehold.id,
       category_id: catGroceries.id,
       amount: 275000,
-      description: 'Weekly supermarket restock',
+      description: isId ? 'Belanja mingguan supermarket' : 'Weekly supermarket restock',
       transaction_date: format(subDays(new Date(), 2), 'yyyy-MM-dd'),
       created_at: now,
       updated_at: now,
@@ -123,7 +110,7 @@ export function generateDefaultData(user: User): {
       classification_id: classPersonal.id,
       category_id: catFnB.id,
       amount: 65000,
-      description: 'Lunch & specialty coffee',
+      description: isId ? 'Makan siang & kopi' : 'Lunch & specialty coffee',
       transaction_date: format(subDays(new Date(), 3), 'yyyy-MM-dd'),
       created_at: now,
       updated_at: now,
@@ -135,7 +122,7 @@ export function generateDefaultData(user: User): {
       classification_id: classPersonal.id,
       category_id: catTransport.id,
       amount: 35000,
-      description: 'Ride hailing to downtown',
+      description: isId ? 'Ojek online' : 'Ride hailing to downtown',
       transaction_date: format(subDays(new Date(), 4), 'yyyy-MM-dd'),
       created_at: now,
       updated_at: now,
@@ -147,7 +134,7 @@ export function generateDefaultData(user: User): {
       classification_id: classPersonal.id,
       category_id: catEntertainment.id,
       amount: 120000,
-      description: 'Weekend cinema movie tickets',
+      description: isId ? 'Tiket bioskop akhir pekan' : 'Weekend cinema movie tickets',
       transaction_date: format(subDays(new Date(), 6), 'yyyy-MM-dd'),
       created_at: now,
       updated_at: now,
@@ -159,7 +146,7 @@ export function generateDefaultData(user: User): {
       classification_id: classHousehold.id,
       category_id: catFnB.id,
       amount: 85000,
-      description: 'Family dinner takeaway',
+      description: isId ? 'Makan malam keluarga' : 'Family dinner takeaway',
       transaction_date: format(subDays(new Date(), 8), 'yyyy-MM-dd'),
       created_at: now,
       updated_at: now,

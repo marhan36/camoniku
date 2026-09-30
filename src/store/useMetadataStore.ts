@@ -7,6 +7,7 @@ import { useAuthStore } from './useAuthStore'
 import { normalizeString } from '@/utils/normalize'
 import { toast } from 'sonner'
 import i18n from '@/i18n'
+import { getDefaultClassifications, getDefaultCategories } from '@/utils/dummyData'
 
 interface MetadataState {
   classifications: Classification[]
@@ -225,9 +226,36 @@ export const useMetadataStore = create<MetadataState>((set, get) => ({
   },
 
   initMetadata: () => {
+    let classifications = localDB.getClassifications()
+    let categories = localDB.getCategories()
+    const notebooks = localDB.getNotebooks()
+    const lang = (localDB.getSettings().language || 'en') as 'en' | 'id'
+    let hasChanges = false
+
+    notebooks.forEach((nb) => {
+      const nbClass = classifications.filter((c) => c.notebook_id === nb.id)
+      if (nbClass.length === 0) {
+        const defaults = getDefaultClassifications(nb.id, lang)
+        classifications = [...classifications, ...defaults]
+        hasChanges = true
+      }
+
+      const nbCat = categories.filter((c) => c.notebook_id === nb.id)
+      if (nbCat.length === 0) {
+        const defaults = getDefaultCategories(nb.id, lang)
+        categories = [...categories, ...defaults]
+        hasChanges = true
+      }
+    })
+
+    if (hasChanges) {
+      localDB.setClassifications(classifications)
+      localDB.setCategories(categories)
+    }
+
     set({
-      classifications: localDB.getClassifications(),
-      categories: localDB.getCategories(),
+      classifications,
+      categories,
     })
   },
 }))

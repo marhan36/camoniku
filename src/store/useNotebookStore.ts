@@ -6,6 +6,8 @@ import { doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore'
 import { useAuthStore } from './useAuthStore'
 import { toast } from 'sonner'
 import i18n from '@/i18n'
+import { getDefaultClassifications, getDefaultCategories } from '@/utils/dummyData'
+import { useMetadataStore } from './useMetadataStore'
 
 interface NotebookState {
   notebooks: Notebook[]
@@ -59,6 +61,7 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
     const user = useAuthStore.getState().user
     const userId = user?.id || 'guest'
     const now = new Date().toISOString()
+    const lang = (localDB.getSettings().language || 'en') as 'en' | 'id'
 
     const newNotebook: Notebook = {
       id: crypto.randomUUID(),
@@ -70,6 +73,20 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
       updated_at: now,
     }
 
+    // Auto-create 2 default classifications and 5 default categories reflecting chosen language
+    const defaultClass = getDefaultClassifications(newNotebook.id, lang)
+    const defaultCats = getDefaultCategories(newNotebook.id, lang)
+
+    const currentClass = localDB.getClassifications()
+    const currentCats = localDB.getCategories()
+    const updatedClass = [...currentClass, ...defaultClass]
+    const updatedCats = [...currentCats, ...defaultCats]
+
+    localDB.setClassifications(updatedClass)
+    localDB.setCategories(updatedCats)
+    useMetadataStore.getState().setClassifications(updatedClass)
+    useMetadataStore.getState().setCategories(updatedCats)
+
     const updatedNotebooks = [...get().notebooks, newNotebook]
     localDB.setNotebooks(updatedNotebooks)
     localDB.setActiveNotebookId(newNotebook.id)
@@ -78,6 +95,12 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
     if (user && !user.is_anonymous) {
       try {
         await setDoc(doc(db, 'notebooks', newNotebook.id), newNotebook)
+        for (const c of defaultClass) {
+          await setDoc(doc(db, 'classifications', c.id), c)
+        }
+        for (const cat of defaultCats) {
+          await setDoc(doc(db, 'categories', cat.id), cat)
+        }
       } catch (e) {
         console.warn('Error syncing created notebook to Firestore:', e)
       }

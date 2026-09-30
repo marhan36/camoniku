@@ -6,6 +6,9 @@ import { localDB } from '@/lib/storage/localStorage'
 import { generateDefaultData } from '@/utils/dummyData'
 import { toast } from 'sonner'
 import i18n from '@/i18n'
+import { useNotebookStore } from './useNotebookStore'
+import { useMetadataStore } from './useMetadataStore'
+import { useTransactionStore } from './useTransactionStore'
 
 interface AuthState {
   user: User | null
@@ -41,10 +44,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       is_anonymous: true,
     }
 
+    const lang = (localDB.getSettings().language || 'en') as 'en' | 'id'
     // Check if notebooks already exist in localDB
     let notebooks = localDB.getNotebooks()
     if (notebooks.length === 0) {
-      const defaultData = generateDefaultData(guestUser)
+      const defaultData = generateDefaultData(guestUser, lang)
       guestUser.active_notebook_id = defaultData.notebook.id
       notebooks = [defaultData.notebook]
 
@@ -53,6 +57,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       localDB.setCategories(defaultData.categories)
       localDB.setTransactions(defaultData.transactions)
       localDB.setActiveNotebookId(defaultData.notebook.id)
+
+      useNotebookStore.getState().setNotebooks(notebooks)
+      useMetadataStore.getState().setClassifications(defaultData.classifications)
+      useMetadataStore.getState().setCategories(defaultData.categories)
+      useTransactionStore.getState().setTransactions(defaultData.transactions)
     } else {
       guestUser.active_notebook_id = localDB.getActiveNotebookId() || notebooks[0].id
     }
@@ -129,7 +138,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           userData.active_notebook_id = migratedNotebooks[0]?.id || null
         } else {
           // Fresh Google user, generate default onboarding notebook
-          const defaultData = generateDefaultData(userData)
+          const lang = (localDB.getSettings().language || 'en') as 'en' | 'id'
+          const defaultData = generateDefaultData(userData, lang)
           userData.active_notebook_id = defaultData.notebook.id
 
           try {
@@ -152,6 +162,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           localDB.setCategories(defaultData.categories)
           localDB.setTransactions(defaultData.transactions)
           localDB.setActiveNotebookId(defaultData.notebook.id)
+
+          useNotebookStore.getState().setNotebooks([defaultData.notebook])
+          useMetadataStore.getState().setClassifications(defaultData.classifications)
+          useMetadataStore.getState().setCategories(defaultData.categories)
+          useTransactionStore.getState().setTransactions(defaultData.transactions)
         }
 
         await setDoc(userDocRef, userData)
