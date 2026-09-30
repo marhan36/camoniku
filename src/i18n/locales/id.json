@@ -71,7 +71,13 @@
     "no_transactions_desc": "Tidak ada pengeluaran yang cocok dengan filter atau bulan terpilih.",
     "showing_page": "Menampilkan {{from}} - {{to}} dari {{total}} transaksi",
     "prev": "Sebelumnya",
-    "next": "Berikutnya"
+    "next": "Berikutnya",
+    "selected_count": "{{count}} terpilih",
+    "select_all": "Pilih Semua",
+    "clear_selection": "Hapus",
+    "loading_more": "Memuat transaksi lainnya...",
+    "showing_all": "Menampilkan seluruh {{total}} transaksi",
+    "load_more": "Muat Lebih Banyak"
   },
   "reports": {
     "title": "Analitik & Laporan Pengeluaran",

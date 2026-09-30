@@ -71,7 +71,13 @@
     "no_transactions_desc": "No expenses match your selected filters or current month.",
     "showing_page": "Showing {{from}} to {{to}} of {{total}} transactions",
     "prev": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "selected_count": "{{count}} selected",
+    "select_all": "Select All",
+    "clear_selection": "Clear",
+    "loading_more": "Loading more transactions...",
+    "showing_all": "Showing all {{total}} transactions",
+    "load_more": "Load More"
   },
   "reports": {
     "title": "Expense Analytics & Reports",

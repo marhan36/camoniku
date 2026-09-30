@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { useNotebookStore } from '@/store/useNotebookStore'
 import { useTransactionStore } from '@/store/useTransactionStore'
 import { useMetadataStore } from '@/store/useMetadataStore'
@@ -10,6 +10,7 @@ import { Transaction } from '@/types'
 import { TransactionModal } from '@/components/modals/TransactionModal'
 import { ConfirmModal } from '@/components/common/ConfirmModal'
 import { EmptyState } from '@/components/common/EmptyState'
+import { MultiSelectDropdown } from '@/components/common/MultiSelectDropdown'
 import {
   Plus,
   FileSpreadsheet,
@@ -19,14 +20,14 @@ import {
   Edit2,
   Trash2,
   Receipt,
-  ChevronLeft,
-  ChevronRight,
+  Loader2,
   User as UserIcon,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { parseISO, getYear, getMonth } from 'date-fns'
 
-const ITEMS_PER_PAGE = 20
+const INITIAL_LOAD_COUNT = 25
+const LOAD_MORE_STEP = 20
 
 export const TransactionsPage: React.FC = () => {
   const { t } = useTranslation()
@@ -47,12 +48,13 @@ export const TransactionsPage: React.FC = () => {
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('')
   const [filterUser, setFilterUser] = useState<string>('ALL')
-  const [filterClassification, setFilterClassification] = useState<string>('ALL')
-  const [filterCategory, setFilterCategory] = useState<string>('ALL')
+  const [selectedClassifications, setSelectedClassifications] = useState<string[]>([])
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'lowest' | 'highest'>('newest')
 
-  // Pagination
-  const [currentPage, setCurrentPage] = useState<number>(1)
+  // Infinite Scroll state
+  const [visibleCount, setVisibleCount] = useState<number>(INITIAL_LOAD_COUNT)
+  const observerRef = useRef<HTMLDivElement | null>(null)
 
   // Modals state
   const [isAddTxOpen, setIsAddTxOpen] = useState(false)
@@ -126,9 +128,18 @@ export const TransactionsPage: React.FC = () => {
 
         // Filters
         if (filterUser !== 'ALL' && tx.user_id !== filterUser) return false
-        if (filterClassification !== 'ALL' && tx.classification_id !== filterClassification)
+        if (
+          selectedClassifications.length > 0 &&
+          !selectedClassifications.includes(tx.classification_id)
+        ) {
           return false
-        if (filterCategory !== 'ALL' && tx.category_id !== filterCategory) return false
+        }
+        if (
+          selectedCategories.length > 0 &&
+          !selectedCategories.includes(tx.category_id)
+        ) {
+          return false
+        }
 
         return true
       })
@@ -154,26 +165,58 @@ export const TransactionsPage: React.FC = () => {
     selectedMonth,
     searchQuery,
     filterUser,
-    filterClassification,
-    filterCategory,
+    selectedClassifications,
+    selectedCategories,
     sortBy,
     categoryMap,
     classificationMap,
   ])
 
-  // Pagination calculation
+  // Infinite scroll calculation
   const totalItems = filteredTransactions.length
-  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1
-  const paginatedTransactions = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
-    return filteredTransactions.slice(startIndex, startIndex + ITEMS_PER_PAGE)
-  }, [filteredTransactions, currentPage])
+  const displayedTransactions = useMemo(() => {
+    return filteredTransactions.slice(0, visibleCount)
+  }, [filteredTransactions, visibleCount])
 
-  // Reset page when filter changes
-  const handleFilterChange = (setter: (val: any) => void, val: any) => {
-    setter(val)
-    setCurrentPage(1)
-  }
+  const hasMore = visibleCount < totalItems
+
+  // Reset visibleCount when filters change
+  useEffect(() => {
+    setVisibleCount(INITIAL_LOAD_COUNT)
+  }, [
+    selectedYear,
+    selectedMonth,
+    searchQuery,
+    filterUser,
+    selectedClassifications,
+    selectedCategories,
+    sortBy,
+  ])
+
+  // Auto load more when scrolling near bottom
+  useEffect(() => {
+    if (!hasMore) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) => Math.min(prev + LOAD_MORE_STEP, totalItems))
+        }
+      },
+      { threshold: 0.1, rootMargin: '200px' }
+    )
+
+    const currentEl = observerRef.current
+    if (currentEl) {
+      observer.observe(currentEl)
+    }
+
+    return () => {
+      if (currentEl) {
+        observer.unobserve(currentEl)
+      }
+    }
+  }, [hasMore, totalItems])
 
   // Handle Export to Excel
   const handleExportExcel = () => {
@@ -245,7 +288,7 @@ export const TransactionsPage: React.FC = () => {
             <div className="flex gap-2">
               <select
                 value={selectedMonth}
-                onChange={(e) => handleFilterChange(setSelectedMonth, Number(e.target.value))}
+                onChange={(e) => setSelectedMonth(Number(e.target.value))}
                 className="w-2/3 px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-medium focus:ring-2 focus:ring-indigo-100"
               >
                 {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
@@ -256,7 +299,7 @@ export const TransactionsPage: React.FC = () => {
               </select>
               <select
                 value={selectedYear}
-                onChange={(e) => handleFilterChange(setSelectedYear, Number(e.target.value))}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
                 className="w-1/3 px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-medium focus:ring-2 focus:ring-indigo-100"
               >
                 {[selectedYear - 2, selectedYear - 1, selectedYear, selectedYear + 1].map((y) => (
@@ -279,48 +322,32 @@ export const TransactionsPage: React.FC = () => {
                 type="text"
                 placeholder={t('transactions.search_placeholder')}
                 value={searchQuery}
-                onChange={(e) => handleFilterChange(setSearchQuery, e.target.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
               />
             </div>
           </div>
 
-          {/* Classification & Category */}
+          {/* Classification Multi-Select */}
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-              Classification
-            </label>
-            <select
-              value={filterClassification}
-              onChange={(e) => handleFilterChange(setFilterClassification, e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-medium focus:ring-2 focus:ring-indigo-100"
-            >
-              <option value="ALL">{t('transactions.filter_classification')}</option>
-              {notebookClassifications.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            <MultiSelectDropdown
+              label={t('transactions.classification')}
+              placeholder={t('transactions.filter_classification')}
+              options={notebookClassifications.map((c) => ({ id: c.id, name: c.name }))}
+              selectedIds={selectedClassifications}
+              onChange={setSelectedClassifications}
+            />
           </div>
 
-          {/* Category */}
+          {/* Category Multi-Select */}
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-              Category
-            </label>
-            <select
-              value={filterCategory}
-              onChange={(e) => handleFilterChange(setFilterCategory, e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-medium focus:ring-2 focus:ring-indigo-100"
-            >
-              <option value="ALL">{t('transactions.filter_category')}</option>
-              {notebookCategories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            <MultiSelectDropdown
+              label={t('transactions.category')}
+              placeholder={t('transactions.filter_category')}
+              options={notebookCategories.map((c) => ({ id: c.id, name: c.name }))}
+              selectedIds={selectedCategories}
+              onChange={setSelectedCategories}
+            />
           </div>
         </div>
 
@@ -332,7 +359,7 @@ export const TransactionsPage: React.FC = () => {
                 <UserIcon className="w-3.5 h-3.5" />
                 <select
                   value={filterUser}
-                  onChange={(e) => handleFilterChange(setFilterUser, e.target.value)}
+                  onChange={(e) => setFilterUser(e.target.value)}
                   className="px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 bg-white font-medium"
                 >
                   <option value="ALL">{t('transactions.filter_user')}</option>
@@ -350,7 +377,7 @@ export const TransactionsPage: React.FC = () => {
             <span className="text-slate-400 font-medium">Sort:</span>
             <select
               value={sortBy}
-              onChange={(e) => handleFilterChange(setSortBy, e.target.value)}
+              onChange={(e) => setSortBy(e.target.value as any)}
               className="px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 bg-white font-semibold text-slate-700"
             >
               <option value="newest">{t('transactions.sort_newest')}</option>
@@ -390,7 +417,7 @@ export const TransactionsPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm">
-                  {paginatedTransactions.map((tx) => {
+                  {displayedTransactions.map((tx) => {
                     const categoryName = categoryMap.get(tx.category_id) || 'Uncategorized'
                     const classificationName =
                       classificationMap.get(tx.classification_id) || 'Unclassified'
@@ -448,7 +475,7 @@ export const TransactionsPage: React.FC = () => {
 
             {/* Mobile Card List */}
             <div className="md:hidden divide-y divide-slate-100">
-              {paginatedTransactions.map((tx) => {
+              {displayedTransactions.map((tx) => {
                 const categoryName = categoryMap.get(tx.category_id) || 'Uncategorized'
                 const classificationName =
                   classificationMap.get(tx.classification_id) || 'Unclassified'
@@ -503,39 +530,35 @@ export const TransactionsPage: React.FC = () => {
               })}
             </div>
 
-            {/* Pagination Controls */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/50">
-              <span className="text-xs text-slate-500">
-                {t('transactions.showing_page', {
-                  from: (currentPage - 1) * ITEMS_PER_PAGE + 1,
-                  to: Math.min(currentPage * ITEMS_PER_PAGE, totalItems),
-                  total: totalItems,
-                })}
-              </span>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={currentPage <= 1}
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-40 transition cursor-pointer flex items-center gap-1"
+            {/* Infinite Scroll Footer */}
+            <div className="border-t border-slate-100 bg-slate-50/50">
+              {hasMore ? (
+                <div
+                  ref={observerRef}
+                  className="py-6 flex flex-col items-center justify-center gap-2 text-slate-500 text-xs"
                 >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                  <span>{t('transactions.prev')}</span>
-                </button>
-                <span className="text-xs font-bold text-slate-700 px-2">
-                  {currentPage} / {totalPages}
-                </span>
-                <button
-                  type="button"
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-40 transition cursor-pointer flex items-center gap-1"
-                >
-                  <span>{t('transactions.next')}</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
+                  <div className="flex items-center gap-2 text-indigo-600 font-semibold">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>{t('transactions.loading_more')}</span>
+                  </div>
+                  <span className="text-[11px] text-slate-400">
+                    {displayedTransactions.length} of {totalItems}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setVisibleCount((prev) => Math.min(prev + LOAD_MORE_STEP, totalItems))
+                    }
+                    className="mt-1 px-3 py-1 bg-white border border-slate-200 rounded-lg text-[11px] font-medium text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                  >
+                    {t('transactions.load_more')}
+                  </button>
+                </div>
+              ) : (
+                <div className="py-4 text-center text-xs text-slate-400">
+                  {t('transactions.showing_all', { total: totalItems })}
+                </div>
+              )}
             </div>
           </>
         )}
