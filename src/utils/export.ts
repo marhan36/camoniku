@@ -3,6 +3,7 @@ import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import { z } from 'zod'
 import { Transaction, Classification, Category, Notebook, NotebookExportData } from '@/types'
+import { useUserDirectoryStore } from '@/store/useUserDirectoryStore'
 import { formatCurrency } from './currency'
 import { formatDisplayDate } from './date'
 
@@ -26,10 +27,12 @@ export function exportTransactionsToExcel({
 }) {
   const classificationMap = new Map(classifications.map((c) => [c.id, c.name]))
   const categoryMap = new Map(categories.map((c) => [c.id, c.name]))
+  const getUserName = useUserDirectoryStore.getState().getUserName
 
   const rows = transactions.map((t, idx) => ({
     No: idx + 1,
     Date: formatDisplayDate(t.transaction_date, dateFormat),
+    Member: t.user_name || getUserName(t.user_id),
     Classification: classificationMap.get(t.classification_id) || 'Unknown',
     Category: categoryMap.get(t.category_id) || 'Unknown',
     Description: t.description || '-',
@@ -43,6 +46,7 @@ export function exportTransactionsToExcel({
   worksheet['!cols'] = [
     { wch: 6 },  // No
     { wch: 14 }, // Date
+    { wch: 16 }, // Member
     { wch: 18 }, // Classification
     { wch: 20 }, // Category
     { wch: 32 }, // Description

@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useNotebookStore } from '@/store/useNotebookStore'
 import { useTransactionStore } from '@/store/useTransactionStore'
 import { useMetadataStore } from '@/store/useMetadataStore'
 import { useSettingsStore } from '@/store/useSettingsStore'
 import { useAuthStore } from '@/store/useAuthStore'
+import { useUserDirectoryStore } from '@/store/useUserDirectoryStore'
 import { formatCurrency } from '@/utils/currency'
 import { formatDisplayDate } from '@/utils/date'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -53,6 +54,7 @@ export const DashboardPage: React.FC = () => {
   const { user } = useAuthStore()
   const { classifications, categories } = useMetadataStore()
   const { dateFormat } = useSettingsStore()
+  const { getUserName, fetchUsers } = useUserDirectoryStore()
 
   const [isAddTxOpen, setIsAddTxOpen] = useState(false)
   const [groupBy, setGroupBy] = useState<'category' | 'classification' | 'user'>('category')
@@ -74,6 +76,13 @@ export const DashboardPage: React.FC = () => {
       }
     })
   }, [transactions, notebookId])
+
+  useEffect(() => {
+    const userIds = Array.from(new Set(currentMonthTransactions.map((t) => t.user_id).filter(Boolean))) as string[]
+    if (userIds.length > 0) {
+      fetchUsers(userIds)
+    }
+  }, [currentMonthTransactions, fetchUsers])
 
   // Summary Metrics
   const totalAmount = useMemo(
@@ -113,18 +122,7 @@ export const DashboardPage: React.FC = () => {
       } else if (groupBy === 'classification') {
         key = classificationMap.get(tx.classification_id) || 'Unclassified'
       } else if (groupBy === 'user') {
-        if (
-          user &&
-          (tx.user_id === user.id ||
-            tx.user_id === 'guest' ||
-            (user.is_anonymous && tx.user_id?.startsWith('guest')))
-        ) {
-          key = user.name ? `${user.name} (You)` : 'You'
-        } else if (tx.user_id && tx.user_id.length > 15) {
-          key = `${tx.user_id.slice(0, 10)}...`
-        } else {
-          key = tx.user_id || 'User'
-        }
+        key = tx.user_name || getUserName(tx.user_id, true)
       }
       map.set(key, (map.get(key) || 0) + tx.amount)
     })
@@ -132,7 +130,7 @@ export const DashboardPage: React.FC = () => {
     return Array.from(map.entries())
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
-  }, [currentMonthTransactions, groupBy, categoryMap, classificationMap])
+  }, [currentMonthTransactions, groupBy, categoryMap, classificationMap, getUserName])
 
   return (
     <div className="space-y-6">

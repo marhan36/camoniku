@@ -42,6 +42,7 @@ export interface Transaction {
   id: string
   notebook_id: string
   user_id: string
+  user_name?: string
   classification_id: string
   category_id: string
   amount: number

@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Notebook } from '@/types'
 import { useNotebookStore } from '@/store/useNotebookStore'
 import { useAuthStore } from '@/store/useAuthStore'
+import { useUserDirectoryStore } from '@/store/useUserDirectoryStore'
 import { ConfirmModal } from '@/components/common/ConfirmModal'
 import { X, Users, UserPlus, Trash2, Shield, User as UserIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -20,10 +21,18 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
   const { t } = useTranslation()
   const { user } = useAuthStore()
   const { inviteMember, removeMember } = useNotebookStore()
+  const { getUserName, fetchUsers } = useUserDirectoryStore()
 
   const [memberInput, setMemberInput] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (isOpen && notebook) {
+      const ids = [notebook.owner_id, ...(notebook.member_ids || [])]
+      fetchUsers(ids)
+    }
+  }, [isOpen, notebook, fetchUsers])
 
   if (!isOpen || !notebook) return null
 
@@ -102,7 +111,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
             </form>
           ) : (
             <div className="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-100 text-xs text-amber-800">
-              Only the notebook owner ({notebook.owner_id}) can invite or remove collaborators.
+              Only the notebook owner ({getUserName(notebook.owner_id)}) can invite or remove collaborators.
             </div>
           )}
 
@@ -128,8 +137,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                       </div>
                       <div className="truncate">
                         <p className="text-sm font-medium text-slate-800 truncate">
-                          {memberId}
-                          {isCurrentUser && ' (You)'}
+                          {getUserName(memberId, isCurrentUser)}
                         </p>
                         <p className="text-xs text-slate-500 flex items-center gap-1">
                           {isMemberOwner ? (
@@ -139,6 +147,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                           ) : (
                             'Collaborator'
                           )}
+                          {memberId.includes('@') && ` • ${memberId}`}
                         </p>
                       </div>
                     </div>

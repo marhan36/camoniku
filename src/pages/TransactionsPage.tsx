@@ -3,6 +3,7 @@ import { useNotebookStore } from '@/store/useNotebookStore'
 import { useTransactionStore } from '@/store/useTransactionStore'
 import { useMetadataStore } from '@/store/useMetadataStore'
 import { useSettingsStore } from '@/store/useSettingsStore'
+import { useUserDirectoryStore } from '@/store/useUserDirectoryStore'
 import { formatCurrency } from '@/utils/currency'
 import { formatDisplayDate } from '@/utils/date'
 import { exportTransactionsToExcel } from '@/utils/export'
@@ -35,6 +36,7 @@ export const TransactionsPage: React.FC = () => {
   const { transactions, deleteTransaction } = useTransactionStore()
   const { classifications, categories } = useMetadataStore()
   const { dateFormat } = useSettingsStore()
+  const { getUserName, fetchUsers } = useUserDirectoryStore()
 
   const activeNotebook = getActiveNotebook()
   const notebookId = activeNotebook?.id || ''
@@ -98,6 +100,12 @@ export const TransactionsPage: React.FC = () => {
     })
     return Array.from(set)
   }, [transactions, notebookId])
+
+  useEffect(() => {
+    if (availableUsers.length > 0) {
+      fetchUsers(availableUsers)
+    }
+  }, [availableUsers, fetchUsers])
 
   // Filtered & Sorted Transactions for selected month/year
   const filteredTransactions = useMemo(() => {
@@ -365,7 +373,7 @@ export const TransactionsPage: React.FC = () => {
                   <option value="ALL">{t('transactions.filter_user')}</option>
                   {availableUsers.map((u) => (
                     <option key={u} value={u}>
-                      {u.length > 12 ? `${u.slice(0, 10)}...` : u}
+                      {getUserName(u, true)}
                     </option>
                   ))}
                 </select>
@@ -441,7 +449,7 @@ export const TransactionsPage: React.FC = () => {
                           {tx.description || '-'}
                         </td>
                         <td className="py-3.5 px-4 text-xs text-slate-500">
-                          {tx.user_id?.length > 10 ? `${tx.user_id.slice(0, 8)}...` : tx.user_id || 'User'}
+                          {tx.user_name || getUserName(tx.user_id)}
                         </td>
                         <td className="py-3.5 px-6 text-right font-bold text-slate-900">
                           {formatCurrency(tx.amount, currency)}
@@ -506,7 +514,7 @@ export const TransactionsPage: React.FC = () => {
 
                     <div className="flex items-center justify-between pt-1">
                       <span className="text-[11px] text-slate-400">
-                        By: {tx.user_id?.length > 10 ? `${tx.user_id.slice(0, 8)}...` : tx.user_id || 'User'}
+                        By: {tx.user_name || getUserName(tx.user_id)}
                       </span>
                       <div className="flex items-center gap-1">
                         <button

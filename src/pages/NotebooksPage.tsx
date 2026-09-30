@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNotebookStore } from '@/store/useNotebookStore'
 import { useAuthStore } from '@/store/useAuthStore'
 import { useTransactionStore } from '@/store/useTransactionStore'
+import { useUserDirectoryStore } from '@/store/useUserDirectoryStore'
 import { Notebook } from '@/types'
 import { NotebookModal } from '@/components/modals/NotebookModal'
 import { InviteMemberModal } from '@/components/modals/InviteMemberModal'
@@ -27,6 +28,7 @@ export const NotebooksPage: React.FC = () => {
   const { user } = useAuthStore()
   const { notebooks, activeNotebookId, setActiveNotebookId, deleteNotebook } = useNotebookStore()
   const { transactions } = useTransactionStore()
+  const { getUserName, fetchUsers } = useUserDirectoryStore()
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [editingNotebook, setEditingNotebook] = useState<Notebook | null>(null)
@@ -34,6 +36,13 @@ export const NotebooksPage: React.FC = () => {
   const [managingMetadataNotebook, setManagingMetadataNotebook] = useState<Notebook | null>(null)
   const [deletingNotebookId, setDeletingNotebookId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  useEffect(() => {
+    const ownerIds = notebooks.map((nb) => nb.owner_id).filter(Boolean)
+    if (ownerIds.length > 0) {
+      fetchUsers(ownerIds)
+    }
+  }, [notebooks, fetchUsers])
 
   const handleDeleteConfirm = async () => {
     if (!deletingNotebookId) return
@@ -149,7 +158,9 @@ export const NotebooksPage: React.FC = () => {
                       ) : (
                         <>
                           <UserIcon className="w-3.5 h-3.5 text-slate-500" />
-                          <span>{t('notebooks.role_member')}</span>
+                          <span>
+                            {t('notebooks.role_member')} (Owner: {getUserName(nb.owner_id)})
+                          </span>
                         </>
                       )}
                     </span>

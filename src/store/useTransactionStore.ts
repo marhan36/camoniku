@@ -31,12 +31,14 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
   addTransaction: async (data) => {
     const user = useAuthStore.getState().user
     const userId = user?.id || 'guest'
+    const userName = user?.name || (user?.is_anonymous ? 'Guest' : 'User')
     const now = new Date().toISOString()
 
     const newTx: Transaction = {
       ...data,
       id: crypto.randomUUID(),
       user_id: userId,
+      user_name: userName,
       created_at: now,
       updated_at: now,
     }
