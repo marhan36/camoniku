@@ -57,6 +57,15 @@ export const localDB = {
     localStorage.setItem('camoniku_language', settings.language)
   },
 
+  clearUserData: (): void => {
+    localStorage.removeItem(KEYS.USER)
+    localStorage.removeItem(KEYS.NOTEBOOKS)
+    localStorage.removeItem(KEYS.CLASSIFICATIONS)
+    localStorage.removeItem(KEYS.CATEGORIES)
+    localStorage.removeItem(KEYS.TRANSACTIONS)
+    localStorage.removeItem(KEYS.ACTIVE_NOTEBOOK_ID)
+  },
+
   clearAll: (): void => {
     Object.values(KEYS).forEach((k) => localStorage.removeItem(k))
   },

@@ -10,6 +10,7 @@ import { useNotebookStore } from './useNotebookStore'
 import { useMetadataStore } from './useMetadataStore'
 import { useTransactionStore } from './useTransactionStore'
 import { useUserDirectoryStore } from './useUserDirectoryStore'
+import { useNetworkStore } from './useNetworkStore'
 
 interface AuthState {
   user: User | null
@@ -46,9 +47,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     const lang = (localDB.getSettings().language || 'en') as 'en' | 'id'
-    // Check if notebooks already exist in localDB
-    let notebooks = localDB.getNotebooks()
-    if (notebooks.length === 0) {
+    
+    // Only reuse existing local notebooks if they genuinely belong to a guest session
+    const existingNotebooks = localDB.getNotebooks()
+    const isGenuinelyGuestData =
+      existingNotebooks.length > 0 &&
+      existingNotebooks.every((nb) => nb.owner_id?.startsWith('guest'))
+
+    let notebooks = existingNotebooks
+
+    if (!isGenuinelyGuestData) {
+      // Clear any lingering data from previous accounts
+      localDB.clearUserData()
+
       const defaultData = generateDefaultData(guestUser, lang)
       guestUser.active_notebook_id = defaultData.notebook.id
       notebooks = [defaultData.notebook]
@@ -60,11 +71,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       localDB.setActiveNotebookId(defaultData.notebook.id)
 
       useNotebookStore.getState().setNotebooks(notebooks)
+      useNotebookStore.getState().setActiveNotebookId(defaultData.notebook.id)
       useMetadataStore.getState().setClassifications(defaultData.classifications)
       useMetadataStore.getState().setCategories(defaultData.categories)
       useTransactionStore.getState().setTransactions(defaultData.transactions)
     } else {
-      guestUser.active_notebook_id = localDB.getActiveNotebookId() || notebooks[0].id
+      const activeId = localDB.getActiveNotebookId() || notebooks[0].id
+      guestUser.active_notebook_id = activeId
+      useNotebookStore.getState().setNotebooks(notebooks)
+      useNotebookStore.getState().setActiveNotebookId(activeId)
     }
 
     localDB.setUser(guestUser)
@@ -87,6 +102,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       if (userSnap.exists()) {
         userData = userSnap.data() as User
+        // Clear lingering local data so useSync starts fresh with cloud data
+        localDB.clearUserData()
+        useNotebookStore.getState().setNotebooks([])
+        useNotebookStore.getState().setActiveNotebookId(null)
+        useTransactionStore.getState().setTransactions([])
+        useMetadataStore.getState().setClassifications([])
+        useMetadataStore.getState().setCategories([])
       } else {
         // New user
         userData = {
@@ -99,9 +121,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           is_anonymous: false,
         }
 
-        // Migrate local guest data if exists, otherwise generate default onboarding data
+        // Migrate local guest data only if currently logged in as a guest with genuine guest notebooks
         const localNotebooks = localDB.getNotebooks()
-        const isGuestPrev = get().user?.is_anonymous || (!get().user && localNotebooks.length > 0)
+        const isGuestPrev =
+          Boolean(get().user?.is_anonymous) &&
+          localNotebooks.length > 0 &&
+          localNotebooks.every((nb) => nb.owner_id?.startsWith('guest'))
 
         if (isGuestPrev && localNotebooks.length > 0) {
           // Re-assign local guest notebooks to this Google account
@@ -230,7 +255,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (e) {
       console.warn('Firebase signout:', e)
     }
-    localDB.setUser(null)
+    // Purge local user data while keeping settings
+    localDB.clearUserData()
+    useNotebookStore.getState().setNotebooks([])
+    useNotebookStore.getState().setActiveNotebookId(null)
+    useTransactionStore.getState().setTransactions([])
+    useMetadataStore.getState().setClassifications([])
+    useMetadataStore.getState().setCategories([])
+    useUserDirectoryStore.getState().clearUsers()
+    useNetworkStore.getState().setSyncStatus('local_only')
     set({ user: null })
   },
 

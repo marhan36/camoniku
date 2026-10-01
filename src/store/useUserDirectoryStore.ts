@@ -32,6 +32,7 @@ interface UserDirectoryState {
     showYou?: boolean,
     fallbackName?: string | null
   ) => string
+  clearUsers: () => void
 }
 
 export const useUserDirectoryStore = create<UserDirectoryState>((set, get) => ({
@@ -141,5 +142,16 @@ export const useUserDirectoryStore = create<UserDirectoryState>((set, get) => ({
         console.warn(`Could not attach listener for user ${id}:`, e)
       }
     }
+  },
+
+  clearUsers: () => {
+    activeListeners.forEach((unsub) => {
+      try {
+        unsub()
+      } catch {}
+    })
+    activeListeners.clear()
+    localStorage.removeItem(STORAGE_KEY)
+    set({ users: {} })
   },
 }))

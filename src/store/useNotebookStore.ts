@@ -15,7 +15,7 @@ interface NotebookState {
   activeNotebookId: string | null
   isLoading: boolean
   setNotebooks: (notebooks: Notebook[]) => void
-  setActiveNotebookId: (id: string) => void
+  setActiveNotebookId: (id: string | null) => void
   getActiveNotebook: () => Notebook | null
   createNotebook: (name: string, currency: string, setAsActive?: boolean) => Promise<Notebook>
   updateNotebook: (id: string, updates: Partial<Notebook>) => Promise<void>
@@ -47,11 +47,11 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
     set({ notebooks, activeNotebookId: activeId })
   },
 
-  setActiveNotebookId: (id: string) => {
+  setActiveNotebookId: (id: string | null) => {
     localDB.setActiveNotebookId(id)
     set({ activeNotebookId: id })
     const user = useAuthStore.getState().user
-    if (user && !user.is_anonymous) {
+    if (user && !user.is_anonymous && id) {
       try {
         updateDoc(doc(db, 'users', user.id), { active_notebook_id: id })
       } catch (e) {
