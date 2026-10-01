@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Transaction } from '@/types'
 import { useNotebookStore } from '@/store/useNotebookStore'
 import { useMetadataStore } from '@/store/useMetadataStore'
@@ -6,7 +6,7 @@ import { useTransactionStore } from '@/store/useTransactionStore'
 import { formatCurrency, parseCurrencyInput, getCurrencySymbol } from '@/utils/currency'
 import { getTodayISODate } from '@/utils/date'
 import { AddMetadataModal } from './AddMetadataModal'
-import { X, Calendar, Plus, Loader2 } from 'lucide-react'
+import { X, Calendar, Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 interface TransactionModalProps {
@@ -23,7 +23,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const { t } = useTranslation()
   const { getActiveNotebook } = useNotebookStore()
   const { classifications, categories } = useMetadataStore()
-  const { addTransaction, updateTransaction } = useTransactionStore()
+  const { transactions, addTransaction, updateTransaction } = useTransactionStore()
 
   const activeNotebook = getActiveNotebook()
   const notebookId = activeNotebook?.id || ''
@@ -42,17 +42,55 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   // Sub-modal state for "Add New..."
   const [subModalType, setSubModalType] = useState<'classification' | 'category' | null>(null)
 
-  // Filter classifications & categories for active notebook (active ones or current edited)
-  const notebookClassifications = classifications.filter(
-    (c) =>
-      c.notebook_id === notebookId &&
-      (c.is_active !== false || c.id === transactionToEdit?.classification_id)
-  )
-  const notebookCategories = categories.filter(
-    (c) =>
-      c.notebook_id === notebookId &&
-      (c.is_active !== false || c.id === transactionToEdit?.category_id)
-  )
+  // Calculate usage frequency of classifications and categories in active notebook
+  const { classificationUsage, categoryUsage } = useMemo(() => {
+    const classCount: Record<string, number> = {}
+    const catCount: Record<string, number> = {}
+
+    for (const tx of transactions) {
+      if (tx.notebook_id === notebookId) {
+        if (tx.classification_id) {
+          classCount[tx.classification_id] = (classCount[tx.classification_id] || 0) + 1
+        }
+        if (tx.category_id) {
+          catCount[tx.category_id] = (catCount[tx.category_id] || 0) + 1
+        }
+      }
+    }
+
+    return { classificationUsage: classCount, categoryUsage: catCount }
+  }, [transactions, notebookId])
+
+  // Filter & sort classifications & categories: most used first, with name as tiebreaker
+  const notebookClassifications = useMemo(() => {
+    return classifications
+      .filter(
+        (c) =>
+          c.notebook_id === notebookId &&
+          (c.is_active !== false || c.id === transactionToEdit?.classification_id)
+      )
+      .sort((a, b) => {
+        const countA = classificationUsage[a.id] || 0
+        const countB = classificationUsage[b.id] || 0
+        if (countB !== countA) return countB - countA
+        return a.name.localeCompare(b.name)
+      })
+  }, [classifications, notebookId, transactionToEdit?.classification_id, classificationUsage])
+
+  const notebookCategories = useMemo(() => {
+    return categories
+      .filter(
+        (c) =>
+          c.notebook_id === notebookId &&
+          (c.is_active !== false || c.id === transactionToEdit?.category_id)
+      )
+      .sort((a, b) => {
+        const countA = categoryUsage[a.id] || 0
+        const countB = categoryUsage[b.id] || 0
+        if (countB !== countA) return countB - countA
+        return a.name.localeCompare(b.name)
+      })
+  }, [categories, notebookId, transactionToEdit?.category_id, categoryUsage])
 
   useEffect(() => {
     if (isOpen) {
