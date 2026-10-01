@@ -7,11 +7,12 @@ import { useMetadataStore } from '@/store/useMetadataStore'
 import { useTransactionStore } from '@/store/useTransactionStore'
 import { useNetworkStore } from '@/store/useNetworkStore'
 import { useUserDirectoryStore } from '@/store/useUserDirectoryStore'
+import { localDB } from '@/lib/storage/localStorage'
 import { Notebook, Classification, Category, Transaction } from '@/types'
 
 export function useSync() {
   const { user } = useAuthStore()
-  const { activeNotebookId, setNotebooks } = useNotebookStore()
+  const { activeNotebookId, notebooks, setNotebooks } = useNotebookStore()
   const { syncNotebookClassifications, syncNotebookCategories, ensureNotebookMetadata } = useMetadataStore()
   const { setTransactions } = useTransactionStore()
   const { setOnline, setSyncStatus } = useNetworkStore()
@@ -50,10 +51,11 @@ export function useSync() {
     }
 
     setSyncStatus('syncing')
+    const currentUid = auth.currentUser.uid
 
     // Listen to user's notebooks
     const notebooksRef = collection(db, 'notebooks')
-    const qNotebooks = query(notebooksRef, where('member_ids', 'array-contains', user.id))
+    const qNotebooks = query(notebooksRef, where('member_ids', 'array-contains', currentUid))
 
     const unsubNotebooks = onSnapshot(
       qNotebooks,
@@ -70,8 +72,20 @@ export function useSync() {
             if (nb.member_ids) allUserIds.push(...nb.member_ids)
           })
           useUserDirectoryStore.getState().fetchUsers(allUserIds)
+          setSyncStatus('synced')
+        } else {
+          // If the authenticated user has zero notebooks in this Firestore DB (e.g. wiped collections),
+          // automatically create a default onboarding notebook so the user is never stuck in an invalid state.
+          const { notebooks: existingNbs, createNotebook } = useNotebookStore.getState()
+          if (existingNbs.length === 0 || existingNbs.every((n) => n.owner_id?.startsWith('guest'))) {
+            const lang = (localDB.getSettings().language || 'en') as 'en' | 'id'
+            const defaultName = lang === 'id' ? 'Catatan Pengeluaran' : 'My Expenses'
+            createNotebook(defaultName, 'IDR', true).catch((e) => {
+              console.warn('Auto-create default notebook error:', e)
+            })
+          }
+          setSyncStatus('synced')
         }
-        setSyncStatus('synced')
       },
       (err) => {
         console.warn('Notebooks sync warning:', err)
@@ -83,17 +97,17 @@ export function useSync() {
     const invRef = collection(db, 'invitations')
     const qAcceptedInv = query(
       invRef,
-      where('owner_id', '==', user.id),
+      where('owner_id', '==', currentUid),
       where('status', '==', 'accepted')
     )
     const unsubInv = onSnapshot(
       qAcceptedInv,
       async (snapshot) => {
-        const { notebooks, updateNotebook } = useNotebookStore.getState()
+        const { notebooks: currentNotebooks, updateNotebook } = useNotebookStore.getState()
         for (const docSnap of snapshot.docs) {
           const inv = docSnap.data()
           if (!inv.accepted_by) continue
-          const nb = notebooks.find((n) => n.id === inv.notebook_id)
+          const nb = currentNotebooks.find((n) => n.id === inv.notebook_id)
           if (
             nb &&
             (!nb.member_ids.includes(inv.accepted_by) ||
@@ -120,6 +134,12 @@ export function useSync() {
   // 3. Listen to Classifications, Categories, Transactions for the Active Notebook
   useEffect(() => {
     if (!user || user.is_anonymous || !auth.currentUser || !activeNotebookId) {
+      return
+    }
+
+    // Safety guard: only listen to Firestore if the active notebook actually belongs to user's loaded notebooks
+    const currentNotebook = notebooks.find((n) => n.id === activeNotebookId)
+    if (!currentNotebook) {
       return
     }
 
@@ -185,6 +205,7 @@ export function useSync() {
     }
   }, [
     user,
+    notebooks,
     activeNotebookId,
     syncNotebookClassifications,
     syncNotebookCategories,
