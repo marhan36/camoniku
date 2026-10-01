@@ -2,7 +2,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
+    // =========================================================================
+    // Authentication & Identity Helpers
+    // =========================================================================
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -11,98 +13,140 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Check if user is owner of the notebook
-    function isNotebookOwner(notebookData) {
-      return isAuthenticated() && notebookData.owner_id == request.auth.uid;
-    }
-
-    // Check if user is a member or owner of the notebook
-    function isNotebookMember(notebookData) {
-      return isAuthenticated() && (
-        notebookData.owner_id == request.auth.uid ||
-        (notebookData.member_ids is list && request.auth.uid in notebookData.member_ids)
-      );
-    }
-
-    // Lookup parent notebook data
+    // =========================================================================
+    // Notebook Membership & Ownership Helpers
+    // =========================================================================
     function getNotebookData(notebookId) {
       return get(/databases/$(database)/documents/notebooks/$(notebookId)).data;
     }
 
-    // Users Collection
+    // Check if the authenticated user is the owner or active member of the notebook
+    function isNotebookMember(notebookId) {
+      let nb = getNotebookData(notebookId);
+      return isAuthenticated() && (
+        nb.owner_id == request.auth.uid ||
+        ('member_ids' in nb && nb.member_ids is list && request.auth.uid in nb.member_ids)
+      );
+    }
+
+    // =========================================================================
+    // 1. Users Collection (/users/{userId})
+    // =========================================================================
     match /users/{userId} {
+      // Anyone logged in can read user profiles to resolve collaborator names/emails
       allow read: if isAuthenticated();
+
+      // Users can only write/update their own profile
       allow create, update: if isUser(userId);
       allow delete: if false;
     }
 
-    // Notebooks Collection
+    // =========================================================================
+    // 2. Notebooks Collection (/notebooks/{notebookId})
+    // =========================================================================
     match /notebooks/{notebookId} {
-      // Anyone in member_ids or owner can read
+      // READ: Allowed if the user is in member_ids OR is the owner
+      // Must match query: where('member_ids', 'array-contains', user.id)
       allow read: if isAuthenticated() && (
-        resource.data.owner_id == request.auth.uid ||
-        (resource.data.member_ids is list && request.auth.uid in resource.data.member_ids)
+        (resource.data.member_ids is list && request.auth.uid in resource.data.member_ids) ||
+        resource.data.owner_id == request.auth.uid
       );
 
-      // Authenticated users can create notebook if they set themselves as owner
+      // CREATE: Authenticated user creating a notebook where they are the owner
       allow create: if isAuthenticated() &&
         request.resource.data.owner_id == request.auth.uid &&
         (request.auth.uid in request.resource.data.member_ids);
 
-      // Only Owner can update notebook details or member_ids, OR an authenticated user joining via invite
+      // UPDATE:
+      // Case A: Owner updating notebook metadata, currency, members, or pending_invites
+      // Case B: An invited user joining the notebook by appending their own UID to member_ids
       allow update: if isAuthenticated() && (
-        (isNotebookOwner(resource.data) && request.resource.data.owner_id == resource.data.owner_id) ||
+        // Owner updating details
+        (resource.data.owner_id == request.auth.uid && request.resource.data.owner_id == resource.data.owner_id) ||
+        // Invitee accepting invite and adding themselves to member_ids
         (
           request.resource.data.owner_id == resource.data.owner_id &&
           request.auth.uid in request.resource.data.member_ids
         )
       );
 
-      // Only Owner can delete notebook
-      allow delete: if isNotebookOwner(resource.data);
+      // DELETE: Only the notebook owner can delete the notebook
+      allow delete: if isAuthenticated() && resource.data.owner_id == request.auth.uid;
     }
 
-    // Invitations Collection
+    // =========================================================================
+    // 3. Invitations Collection (/invitations/{invitationId})
+    // =========================================================================
     match /invitations/{invitationId} {
+      // GET: Anyone can fetch an invitation by ID (needed for public invite link preview)
       allow get: if true;
-      allow list, create, update, delete: if isAuthenticated();
+
+      // LIST: Logged-in users can list invitations where they are owner or invitee
+      allow list: if isAuthenticated();
+
+      // CREATE: Logged-in notebook owner can issue invitations
+      allow create: if isAuthenticated() && request.resource.data.owner_id == request.auth.uid;
+
+      // UPDATE:
+      // Owner can revoke/update, OR invitee can accept/decline
+      allow update: if isAuthenticated() && (
+        resource.data.owner_id == request.auth.uid ||
+        (request.resource.data.accepted_by == request.auth.uid) ||
+        (resource.data.invitee_email == request.auth.token.email)
+      );
+
+      // DELETE: Owner can remove invitations
+      allow delete: if isAuthenticated() && resource.data.owner_id == request.auth.uid;
     }
 
-    // Classifications Collection
+    // =========================================================================
+    // 4. Classifications Collection (/classifications/{classificationId})
+    // =========================================================================
     match /classifications/{classificationId} {
-      allow read: if isAuthenticated() &&
-        isNotebookMember(getNotebookData(resource.data.notebook_id));
+      // READ: Allowed if the user is an owner/member of the notebook
+      allow read: if isNotebookMember(resource.data.notebook_id);
 
-      allow create: if isAuthenticated() &&
-        isNotebookMember(getNotebookData(request.resource.data.notebook_id));
+      // CREATE: Allowed if user is creating for a notebook they belong to
+      allow create: if isNotebookMember(request.resource.data.notebook_id);
 
-      allow update, delete: if isAuthenticated() &&
-        isNotebookMember(getNotebookData(resource.data.notebook_id));
+      // UPDATE/DELETE: Allowed if user belongs to the notebook
+      allow update, delete: if isNotebookMember(resource.data.notebook_id);
     }
 
-    // Categories Collection
+    // =========================================================================
+    // 5. Categories Collection (/categories/{categoryId})
+    // =========================================================================
     match /categories/{categoryId} {
-      allow read: if isAuthenticated() &&
-        isNotebookMember(getNotebookData(resource.data.notebook_id));
+      // READ: Allowed if the user is an owner/member of the notebook
+      allow read: if isNotebookMember(resource.data.notebook_id);
 
-      allow create: if isAuthenticated() &&
-        isNotebookMember(getNotebookData(request.resource.data.notebook_id));
+      // CREATE: Allowed if user is creating for a notebook they belong to
+      allow create: if isNotebookMember(request.resource.data.notebook_id);
 
-      allow update, delete: if isAuthenticated() &&
-        isNotebookMember(getNotebookData(resource.data.notebook_id));
+      // UPDATE/DELETE: Allowed if user belongs to the notebook
+      allow update, delete: if isNotebookMember(resource.data.notebook_id);
     }
 
-    // Transactions Collection
+    // =========================================================================
+    // 6. Transactions Collection (/transactions/{transactionId})
+    // =========================================================================
     match /transactions/{transactionId} {
-      allow read: if isAuthenticated() &&
-        isNotebookMember(getNotebookData(resource.data.notebook_id));
+      // READ: Allowed if user is owner/member of the notebook
+      allow read: if isNotebookMember(resource.data.notebook_id);
 
-      allow create: if isAuthenticated() &&
-        isNotebookMember(getNotebookData(request.resource.data.notebook_id)) &&
+      // CREATE: Allowed if user belongs to the notebook and records under their own user_id
+      allow create: if isNotebookMember(request.resource.data.notebook_id) &&
         request.resource.data.user_id == request.auth.uid;
 
-      allow update, delete: if isAuthenticated() &&
-        isNotebookMember(getNotebookData(resource.data.notebook_id));
+      // UPDATE: Allowed if user belongs to the notebook
+      allow update: if isNotebookMember(resource.data.notebook_id);
+
+      // DELETE: Allowed if user is transaction creator or notebook owner
+      allow delete: if isAuthenticated() && (
+        resource.data.user_id == request.auth.uid ||
+        getNotebookData(resource.data.notebook_id).owner_id == request.auth.uid
+      );
     }
+
   }
 }
