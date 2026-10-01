@@ -140,7 +140,7 @@ export const ManageMetadataModal: React.FC<ManageMetadataModalProps> = ({
               </div>
               <div>
                 <h2 className="text-base font-bold text-slate-900">
-                  Classifications & Categories
+                  {t('metadata.title')}
                 </h2>
                 <p className="text-xs text-slate-500">{notebook.name}</p>
               </div>
@@ -171,7 +171,7 @@ export const ManageMetadataModal: React.FC<ManageMetadataModalProps> = ({
                 }`}
               >
                 <FolderTree className="w-4 h-4" />
-                <span>Classifications ({notebookClassifications.length})</span>
+                <span>{t('metadata.classifications_tab', { count: notebookClassifications.length })}</span>
               </button>
               <button
                 type="button"
@@ -186,7 +186,7 @@ export const ManageMetadataModal: React.FC<ManageMetadataModalProps> = ({
                 }`}
               >
                 <Tag className="w-4 h-4" />
-                <span>Categories ({notebookCategories.length})</span>
+                <span>{t('metadata.categories_tab', { count: notebookCategories.length })}</span>
               </button>
             </div>
           </div>
@@ -198,8 +198,8 @@ export const ManageMetadataModal: React.FC<ManageMetadataModalProps> = ({
                 type="text"
                 placeholder={
                   activeTab === 'classifications'
-                    ? 'New classification name...'
-                    : 'New category name...'
+                    ? t('metadata.new_classification_placeholder')
+                    : t('metadata.new_category_placeholder')
                 }
                 value={newInputName}
                 onChange={(e) => setNewInputName(e.target.value)}
@@ -215,7 +215,7 @@ export const ManageMetadataModal: React.FC<ManageMetadataModalProps> = ({
                 ) : (
                   <Plus className="w-4 h-4" />
                 )}
-                <span>Add</span>
+                <span>{t('common.add')}</span>
               </button>
             </form>
           </div>
@@ -225,7 +225,7 @@ export const ManageMetadataModal: React.FC<ManageMetadataModalProps> = ({
             {activeTab === 'classifications' ? (
               notebookClassifications.length === 0 ? (
                 <p className="text-xs text-slate-400 text-center py-8">
-                  No classifications yet. Add your first classification above.
+                  {t('metadata.no_classifications')}
                 </p>
               ) : (
                 notebookClassifications.map((item) => (
@@ -252,7 +252,7 @@ export const ManageMetadataModal: React.FC<ManageMetadataModalProps> = ({
                         })
                       }
                       className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
-                      title="Delete classification"
+                      title={t('metadata.delete_classification_title')}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -261,7 +261,7 @@ export const ManageMetadataModal: React.FC<ManageMetadataModalProps> = ({
               )
             ) : notebookCategories.length === 0 ? (
               <p className="text-xs text-slate-400 text-center py-8">
-                No categories yet. Add your first category above.
+                {t('metadata.no_categories')}
               </p>
             ) : (
               notebookCategories.map((item) => (
@@ -288,7 +288,7 @@ export const ManageMetadataModal: React.FC<ManageMetadataModalProps> = ({
                       })
                     }
                     className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
-                    title="Delete category"
+                    title={t('metadata.delete_category_title')}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -300,14 +300,14 @@ export const ManageMetadataModal: React.FC<ManageMetadataModalProps> = ({
           {/* Footer */}
           <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between shrink-0">
             <span className="text-[11px] text-slate-400">
-              Deleted items can be restored by adding them again with any capitalization.
+              {t('metadata.restore_notice')}
             </span>
             <button
               type="button"
               onClick={onClose}
               className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
             >
-              Done
+              {t('common.done')}
             </button>
           </div>
         </div>
@@ -316,10 +316,10 @@ export const ManageMetadataModal: React.FC<ManageMetadataModalProps> = ({
       {/* Global Delete Confirmation Modal */}
       <ConfirmModal
         isOpen={!!itemToDelete}
-        title={`Delete ${itemToDelete?.type === 'classification' ? 'Classification' : 'Category'}`}
-        message={`Are you sure you want to delete "${itemToDelete?.name}"? Existing recorded transactions will retain their historical record.`}
-        confirmText="Delete"
-        cancelText="Cancel"
+        title={itemToDelete?.type === 'classification' ? t('metadata.delete_classification_title') : t('metadata.delete_category_title')}
+        message={t('metadata.delete_meta_message', { name: itemToDelete?.name })}
+        confirmText={t('modals.confirm')}
+        cancelText={t('modals.cancel')}
         isLoading={isDeleting}
         onConfirm={handleConfirmDelete}
         onCancel={() => setItemToDelete(null)}

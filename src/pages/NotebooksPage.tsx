@@ -89,7 +89,7 @@ export const NotebooksPage: React.FC = () => {
         <EmptyState
           icon={BookOpen}
           title={t('notebooks.no_notebooks')}
-          description="Create your first notebook to organize transactions into separate workspaces."
+          description={t('notebooks.no_notebooks_desc')}
           actionLabel={t('notebooks.create_notebook')}
           onAction={() => setIsAddModalOpen(true)}
         />
@@ -138,14 +138,14 @@ export const NotebooksPage: React.FC = () => {
                   <div className="mt-5 grid grid-cols-2 gap-2 text-xs text-slate-500 bg-slate-50 p-3 rounded-2xl border border-slate-100">
                     <div className="flex items-center gap-1.5">
                       <Receipt className="w-4 h-4 text-slate-400" />
-                      <span>{txCount} transactions</span>
+                      <span>{t('notebooks.transactions_count', { count: txCount })}</span>
                     </div>
                     <div className="flex items-center gap-1.5 truncate">
                       <Users className="w-4 h-4 text-slate-400 shrink-0" />
                       <span className="truncate">
-                        {memberCount} {memberCount === 1 ? 'member' : 'members'}
+                        {t('notebooks.members_count', { count: memberCount })}
                         {nb.pending_invites && nb.pending_invites.length > 0 && (
-                          <span className="text-amber-600 font-semibold"> ({nb.pending_invites.length} pending)</span>
+                          <span className="text-amber-600 font-semibold"> ({nb.pending_invites.length} {t('notebooks.pending')})</span>
                         )}
                       </span>
                     </div>
@@ -153,7 +153,7 @@ export const NotebooksPage: React.FC = () => {
 
                   {/* Role Badge */}
                   <div className="mt-3 flex items-center justify-between text-xs">
-                    <span className="text-slate-400">Your role:</span>
+                    <span className="text-slate-400">{t('notebooks.your_role')}</span>
                     <span className="font-semibold text-slate-700 flex items-center gap-1">
                       {isOwner ? (
                         <>
@@ -164,7 +164,7 @@ export const NotebooksPage: React.FC = () => {
                         <>
                           <UserIcon className="w-3.5 h-3.5 text-slate-500" />
                           <span>
-                            {t('notebooks.role_member')} (Owner: {getUserName(nb.owner_id)})
+                            {t('notebooks.role_member')} ({t('notebooks.owner_label')} {getUserName(nb.owner_id)})
                           </span>
                         </>
                       )}
@@ -183,7 +183,7 @@ export const NotebooksPage: React.FC = () => {
                       {t('notebooks.set_active')}
                     </button>
                   ) : (
-                    <span className="text-xs text-slate-400 font-medium">Current Workspace</span>
+                    <span className="text-xs text-slate-400 font-medium">{t('notebooks.current_workspace')}</span>
                   )}
 
                   <div className="flex items-center gap-1 ml-auto">
@@ -192,7 +192,7 @@ export const NotebooksPage: React.FC = () => {
                       type="button"
                       onClick={() => setManagingMetadataNotebook(nb)}
                       className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition cursor-pointer"
-                      title="Manage Classifications & Categories"
+                      title={t('notebooks.manage_metadata')}
                     >
                       <Tags className="w-4 h-4" />
                     </button>

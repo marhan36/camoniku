@@ -56,19 +56,19 @@ export const AuthPage: React.FC = () => {
               <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600">
                 <Zap className="w-4 h-4" />
               </div>
-              <span>Offline-first architecture with instant local speed</span>
+              <span>{t('auth.feature_offline')}</span>
             </div>
             <div className="flex items-center gap-3 text-xs font-medium text-slate-600">
               <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600">
                 <Globe className="w-4 h-4" />
               </div>
-              <span>Real-time multi-user collaborative workspaces</span>
+              <span>{t('auth.feature_collab')}</span>
             </div>
             <div className="flex items-center gap-3 text-xs font-medium text-slate-600">
               <div className="p-1.5 rounded-lg bg-purple-50 text-purple-600">
                 <ShieldCheck className="w-4 h-4" />
               </div>
-              <span>Seamless migration from guest mode to Google Cloud</span>
+              <span>{t('auth.feature_sync')}</span>
             </div>
           </div>
 
@@ -99,7 +99,7 @@ export const AuthPage: React.FC = () => {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                 />
               </svg>
-              <span>{isLoadingGoogle ? 'Connecting...' : t('auth.login_with_google')}</span>
+              <span>{isLoadingGoogle ? t('common.connecting') : t('auth.login_with_google')}</span>
             </button>
 
             {/* Guest Login */}
@@ -132,7 +132,7 @@ export const AuthPage: React.FC = () => {
                 <input
                   type="text"
                   autoFocus
-                  placeholder="e.g., Alex"
+                  placeholder={t('auth.nickname_placeholder')}
                   value={guestName}
                   onChange={(e) => setGuestName(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"

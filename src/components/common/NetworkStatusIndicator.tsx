@@ -13,7 +13,7 @@ export const NetworkStatusIndicator: React.FC = () => {
   if (user?.is_anonymous || syncStatus === 'local_only') {
     return (
       <div
-        title={`${t('sync.local_only')} - Guest Mode: Data stored locally on this device`}
+        title={`${t('sync.local_only')} - ${t('sync.guest_mode_desc')}`}
         className="inline-flex items-center gap-1.5 px-2 py-1 lg:px-2.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs whitespace-nowrap shrink-0"
       >
         <HardDrive className="w-3.5 h-3.5 text-amber-600 shrink-0" />
@@ -26,7 +26,7 @@ export const NetworkStatusIndicator: React.FC = () => {
   if (!isOnline || syncStatus === 'offline') {
     return (
       <div
-        title={`${t('sync.offline')} - Device is offline`}
+        title={`${t('sync.offline')} - ${t('sync.offline_desc')}`}
         className="inline-flex items-center gap-1.5 px-2 py-1 lg:px-2.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200 shadow-2xs whitespace-nowrap shrink-0"
       >
         <WifiOff className="w-3.5 h-3.5 text-rose-600 shrink-0" />
@@ -39,7 +39,7 @@ export const NetworkStatusIndicator: React.FC = () => {
   if (syncStatus === 'syncing') {
     return (
       <div
-        title={`${t('sync.syncing')} - Syncing changes with cloud`}
+        title={`${t('sync.syncing')} - ${t('sync.syncing_desc')}`}
         className="inline-flex items-center gap-1.5 px-2 py-1 lg:px-2.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs whitespace-nowrap shrink-0"
       >
         <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-600 shrink-0" />
@@ -51,7 +51,7 @@ export const NetworkStatusIndicator: React.FC = () => {
   // 4. Authenticated & fully synced
   return (
     <div
-      title={`${t('sync.synced')} - All changes synced to cloud`}
+      title={`${t('sync.synced')} - ${t('sync.synced_desc')}`}
       className="inline-flex items-center gap-1.5 px-2 py-1 lg:px-2.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs whitespace-nowrap shrink-0"
     >
       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />

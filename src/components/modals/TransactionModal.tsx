@@ -182,7 +182,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               </div>
               {numericAmount > 0 && (
                 <p className="mt-1 text-xs font-medium text-indigo-600">
-                  Formatted: {formatCurrency(numericAmount, currency)}
+                  {t('modals.formatted_preview', { amount: formatCurrency(numericAmount, currency) })}
                 </p>
               )}
               {errors.amount && <p className="mt-1 text-xs text-rose-500">{errors.amount}</p>}
@@ -233,7 +233,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     }`}
                   >
                     <option value="" disabled>
-                      Select Classification
+                      {t('modals.select_classification')}
                     </option>
                     {notebookClassifications.map((item) => (
                       <option key={item.id} value={item.id}>
@@ -241,7 +241,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                       </option>
                     ))}
                     <option value="__NEW__" className="font-semibold text-indigo-600">
-                      + Add New Classification...
+                      + {t('modals.add_classification')}...
                     </option>
                   </select>
                 </div>
@@ -273,7 +273,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     }`}
                   >
                     <option value="" disabled>
-                      Select Category
+                      {t('modals.select_category')}
                     </option>
                     {notebookCategories.map((item) => (
                       <option key={item.id} value={item.id}>
@@ -281,7 +281,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                       </option>
                     ))}
                     <option value="__NEW__" className="font-semibold text-indigo-600">
-                      + Add New Category...
+                      + {t('modals.add_category')}...
                     </option>
                   </select>
                 </div>
@@ -298,7 +298,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               </label>
               <textarea
                 rows={3}
-                placeholder="What was this expense for?"
+                placeholder={t('modals.desc_placeholder')}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all resize-none"
@@ -320,7 +320,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 className="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
               >
                 {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                {transactionToEdit ? 'Save Changes' : 'Record Expense'}
+                {transactionToEdit ? t('common.save_changes') : t('modals.record_expense')}
               </button>
             </div>
           </form>

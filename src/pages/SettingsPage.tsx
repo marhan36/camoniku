@@ -50,7 +50,7 @@ export const SettingsPage: React.FC = () => {
   const handleExportJson = () => {
     const targetNotebook = notebooks.find((n) => n.id === selectedExportNotebookId)
     if (!targetNotebook) {
-      toast.error('Please select a valid notebook to export.')
+      toast.error(t('settings.select_valid_notebook', 'Please select a valid notebook to export.'))
       return
     }
 
@@ -79,7 +79,7 @@ export const SettingsPage: React.FC = () => {
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
 
-    toast.success('Notebook exported as JSON backup')
+    toast.success(t('settings.export_success'))
   }
 
   const handleLinkGoogle = async () => {
@@ -87,7 +87,7 @@ export const SettingsPage: React.FC = () => {
     try {
       const loggedUser = await loginWithGoogle()
       if (loggedUser) {
-        toast.success('Successfully linked Google Account and migrated data!')
+        toast.success(t('settings.link_google_success'))
       }
     } finally {
       setIsLinkingGoogle(false)
@@ -107,7 +107,7 @@ export const SettingsPage: React.FC = () => {
           {t('settings.title')}
         </h1>
         <p className="text-xs text-slate-500 mt-0.5">
-          Manage your account, preferences, and data backups
+          {t('settings.subtitle')}
         </p>
       </div>
 
@@ -117,9 +117,9 @@ export const SettingsPage: React.FC = () => {
           <div className="space-y-1">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-white/20 text-white backdrop-blur-xs">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Offline Guest Profile</span>
+              <span>{t('settings.offline_guest_badge')}</span>
             </div>
-            <h3 className="text-lg font-bold">Sync your expenses across all devices</h3>
+            <h3 className="text-lg font-bold">{t('settings.sync_banner_title')}</h3>
             <p className="text-xs text-amber-100 max-w-md">
               {t('settings.guest_migration_notice')}
             </p>
@@ -131,7 +131,7 @@ export const SettingsPage: React.FC = () => {
             onClick={handleLinkGoogle}
             className="px-5 py-2.5 bg-white text-slate-900 hover:bg-amber-50 font-bold text-xs rounded-xl shadow-md transition cursor-pointer self-start sm:self-auto disabled:opacity-50"
           >
-            {isLinkingGoogle ? 'Connecting...' : t('settings.sync_with_google')}
+            {isLinkingGoogle ? t('common.connecting') : t('settings.sync_with_google')}
           </button>
         </div>
       )}
@@ -144,7 +144,7 @@ export const SettingsPage: React.FC = () => {
           </div>
           <div>
             <h2 className="text-base font-bold text-slate-900">{t('settings.profile')}</h2>
-            <p className="text-xs text-slate-400">Personalize your identity across notebooks</p>
+            <p className="text-xs text-slate-400">{t('settings.profile_desc')}</p>
           </div>
         </div>
 
@@ -193,7 +193,7 @@ export const SettingsPage: React.FC = () => {
           </div>
           <div>
             <h2 className="text-base font-bold text-slate-900">{t('settings.preferences')}</h2>
-            <p className="text-xs text-slate-400">Language and formatting options</p>
+            <p className="text-xs text-slate-400">{t('settings.preferences_desc')}</p>
           </div>
         </div>
 
@@ -269,9 +269,9 @@ export const SettingsPage: React.FC = () => {
           {/* Export JSON */}
           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h4 className="text-xs font-bold text-slate-800">Export Notebook Backup</h4>
+              <h4 className="text-xs font-bold text-slate-800">{t('settings.export_backup_title')}</h4>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                Download all classifications, categories, and transactions
+                {t('settings.export_backup_desc')}
               </p>
               {notebooks.length > 0 && (
                 <select
@@ -300,9 +300,9 @@ export const SettingsPage: React.FC = () => {
           {/* Import JSON */}
           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h4 className="text-xs font-bold text-slate-800">Import Data from Backup</h4>
+              <h4 className="text-xs font-bold text-slate-800">{t('settings.import_backup_title')}</h4>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                Restore or migrate data from a CamoniKu .json backup file
+                {t('settings.import_backup_desc')}
               </p>
             </div>
             <button
@@ -320,8 +320,8 @@ export const SettingsPage: React.FC = () => {
       {/* Section 4: Logout */}
       <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xs flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-bold text-slate-900">Sign Out</h3>
-          <p className="text-xs text-slate-400">Exit your session on this device</p>
+          <h3 className="text-sm font-bold text-slate-900">{t('settings.sign_out_title')}</h3>
+          <p className="text-xs text-slate-400">{t('settings.sign_out_desc')}</p>
         </div>
         <button
           type="button"

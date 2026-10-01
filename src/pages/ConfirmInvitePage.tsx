@@ -16,8 +16,10 @@ import {
   Shield,
   XCircle,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 export const ConfirmInvitePage: React.FC = () => {
+  const { t } = useTranslation()
   const { inviteId } = useParams<{ inviteId: string }>()
   const navigate = useNavigate()
   const { user, loginWithGoogle, isLoading: isAuthLoading } = useAuthStore()
@@ -31,7 +33,7 @@ export const ConfirmInvitePage: React.FC = () => {
   useEffect(() => {
     async function loadInvite() {
       if (!inviteId) {
-        setError('No invitation ID provided.')
+        setError(t('invitations.no_id'))
         setIsLoading(false)
         return
       }
@@ -39,21 +41,21 @@ export const ConfirmInvitePage: React.FC = () => {
       try {
         const snap = await getDoc(doc(db, 'invitations', inviteId))
         if (!snap.exists()) {
-          setError('This invitation link is invalid or has expired.')
+          setError(t('invitations.unavailable_desc'))
         } else {
           const data = snap.data() as NotebookInvitation
           setInvitation(data)
         }
       } catch (err: any) {
         console.warn('Error loading invitation:', err)
-        setError('Unable to load invitation details. Please check your network connection.')
+        setError(t('invitations.load_failed'))
       } finally {
         setIsLoading(false)
       }
     }
 
     loadInvite()
-  }, [inviteId])
+  }, [inviteId, t])
 
   const handleAccept = async () => {
     if (!inviteId) return
@@ -64,7 +66,7 @@ export const ConfirmInvitePage: React.FC = () => {
       if (res.success) {
         navigate('/')
       } else {
-        setError(res.error || 'Failed to accept invitation.')
+        setError(res.error || t('invitations.unavailable_desc'))
       }
     } finally {
       setIsSubmitting(false)
@@ -87,7 +89,7 @@ export const ConfirmInvitePage: React.FC = () => {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm max-w-md w-full text-center space-y-4">
           <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
-          <p className="text-sm font-medium text-slate-600">Loading invitation details...</p>
+          <p className="text-sm font-medium text-slate-600">{t('invitations.loading')}</p>
         </div>
       </div>
     )
@@ -101,14 +103,14 @@ export const ConfirmInvitePage: React.FC = () => {
             <AlertCircle className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Invitation Unavailable</h2>
-            <p className="text-xs text-slate-500 mt-1">{error || 'This invitation does not exist or has expired.'}</p>
+            <h2 className="text-lg font-bold text-slate-900">{t('invitations.unavailable_title')}</h2>
+            <p className="text-xs text-slate-500 mt-1">{error || t('invitations.unavailable_desc')}</p>
           </div>
           <Link
             to="/"
             className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs transition"
           >
-            <span>Back to Camoniku</span>
+            <span>{t('invitations.back_to_app')}</span>
           </Link>
         </div>
       </div>
@@ -124,16 +126,16 @@ export const ConfirmInvitePage: React.FC = () => {
             <CheckCircle2 className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Already Accepted</h2>
+            <h2 className="text-lg font-bold text-slate-900">{t('invitations.already_accepted_title')}</h2>
             <p className="text-xs text-slate-500 mt-1">
-              You or another member have already accepted this invitation for <strong>{invitation.notebook_name}</strong>.
+              {t('invitations.already_accepted_desc', { name: invitation.notebook_name })}
             </p>
           </div>
           <Link
             to="/"
             className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs transition"
           >
-            <span>Open Notebook</span>
+            <span>{t('invitations.open_notebook')}</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
@@ -150,16 +152,16 @@ export const ConfirmInvitePage: React.FC = () => {
             <XCircle className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Invitation Expired</h2>
+            <h2 className="text-lg font-bold text-slate-900">{t('invitations.expired_title')}</h2>
             <p className="text-xs text-slate-500 mt-1">
-              This invitation has been {invitation.status} by the owner.
+              {t('invitations.expired_desc', { status: invitation.status })}
             </p>
           </div>
           <Link
             to="/"
             className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs transition"
           >
-            <span>Go to Dashboard</span>
+            <span>{t('invitations.go_to_dashboard')}</span>
           </Link>
         </div>
       </div>
@@ -180,12 +182,12 @@ export const ConfirmInvitePage: React.FC = () => {
               C
             </div>
             <div>
-              <h1 className="text-lg font-bold text-slate-900">Notebook Invitation</h1>
-              <p className="text-xs text-slate-400">Collaboration on Camoniku</p>
+              <h1 className="text-lg font-bold text-slate-900">{t('invitations.page_title')}</h1>
+              <p className="text-xs text-slate-400">{t('invitations.page_subtitle')}</p>
             </div>
           </div>
           <span className="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200">
-            Pending Confirmation
+            {t('invitations.pending_confirmation')}
           </span>
         </div>
 
@@ -197,7 +199,7 @@ export const ConfirmInvitePage: React.FC = () => {
             </div>
             <div className="min-w-0">
               <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 block">
-                Shared Notebook
+                {t('invitations.shared_notebook')}
               </span>
               <h2 className="text-lg font-extrabold text-slate-900 truncate">
                 {invitation.notebook_name}
@@ -212,14 +214,14 @@ export const ConfirmInvitePage: React.FC = () => {
             <div className="flex items-center gap-2 text-slate-600">
               <Shield className="w-4 h-4 text-indigo-500 shrink-0" />
               <div className="truncate">
-                <span className="text-slate-400 block text-[10px]">Invited by:</span>
+                <span className="text-slate-400 block text-[10px]">{t('invitations.invited_by')}</span>
                 <span className="font-semibold text-slate-800">{invitation.owner_name}</span>
               </div>
             </div>
             <div className="flex items-center gap-2 text-slate-600">
               <Mail className="w-4 h-4 text-indigo-500 shrink-0" />
               <div className="truncate">
-                <span className="text-slate-400 block text-[10px]">Intended for:</span>
+                <span className="text-slate-400 block text-[10px]">{t('invitations.intended_for')}</span>
                 <span className="font-medium text-slate-800">{invitation.invitee_email}</span>
               </div>
             </div>
@@ -233,9 +235,9 @@ export const ConfirmInvitePage: React.FC = () => {
               <User className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Sign in to Accept Invitation</h3>
+              <h3 className="text-sm font-bold text-slate-900">{t('invitations.signin_to_accept_title')}</h3>
               <p className="text-xs text-slate-500 mt-1">
-                Please sign in with Google ({invitation.invitee_email}) to add this shared notebook to your account.
+                {t('invitations.signin_to_accept_desc', { email: invitation.invitee_email })}
               </p>
             </div>
             <button
@@ -248,7 +250,7 @@ export const ConfirmInvitePage: React.FC = () => {
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <>
-                  <span>Sign in with Google</span>
+                  <span>{t('auth.login_with_google')}</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -260,8 +262,10 @@ export const ConfirmInvitePage: React.FC = () => {
               <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-800 flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <div>
-                  You are currently logged in as <strong>{user?.email}</strong>. This invitation was sent to{' '}
-                  <strong>{invitation.invitee_email}</strong>. You may still accept it to attach this notebook to your current account.
+                  {t('invitations.email_mismatch_desc', {
+                    currentEmail: user?.email,
+                    inviteEmail: invitation.invitee_email,
+                  })}
                 </div>
               </div>
             )}
@@ -278,7 +282,7 @@ export const ConfirmInvitePage: React.FC = () => {
                 ) : (
                   <>
                     <CheckCircle2 className="w-4 h-4" />
-                    <span>Accept & Join Notebook</span>
+                    <span>{t('invitations.accept_and_join')}</span>
                   </>
                 )}
               </button>
@@ -289,7 +293,7 @@ export const ConfirmInvitePage: React.FC = () => {
                 disabled={isSubmitting}
                 className="w-full sm:w-auto py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer"
               >
-                Decline
+                {t('invitations.decline')}
               </button>
             </div>
           </div>

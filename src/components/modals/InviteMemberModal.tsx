@@ -65,10 +65,10 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
     try {
       await navigator.clipboard.writeText(url)
       setCopiedId(id)
-      toast.success('Invitation link copied to clipboard!')
+      toast.success(t('invitations.copy_success'))
       setTimeout(() => setCopiedId(null), 2500)
     } catch {
-      toast.error('Failed to copy link.')
+      toast.error(t('invitations.copy_failed'))
     }
   }
 
@@ -133,16 +133,16 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
               <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200/80 text-xs text-amber-800 flex items-start gap-2.5">
                 <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold">Guest Account</p>
+                  <p className="font-semibold">{t('invitations.guest_account_title')}</p>
                   <p className="mt-0.5 text-amber-700">
-                    You are using an offline guest profile. Please link a Google account in Settings to invite collaborators via email.
+                    {t('invitations.guest_account_notice')}
                   </p>
                 </div>
               </div>
             ) : isOwner ? (
               <form onSubmit={handleInvite} className="space-y-2">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Invite Member by Email
+                  {t('invitations.invite_by_email')}
                 </label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
@@ -162,22 +162,22 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                     className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
                   >
                     <Send className="w-3.5 h-3.5" />
-                    <span>{isSubmitting ? 'Sending...' : 'Send Invite'}</span>
+                    <span>{isSubmitting ? t('common.connecting') : t('invitations.send_invite')}</span>
                   </button>
                 </div>
                 <p className="text-[11px] text-slate-400">
-                  Invited members will see a prompt to join when opening the app, or you can share the link directly.
+                  {t('invitations.invite_hint')}
                 </p>
               </form>
             ) : (
               <div className="p-3 bg-amber-50 rounded-xl border border-amber-100 text-xs text-amber-800">
-                Only the notebook owner ({getUserName(liveNotebook.owner_id)}) can invite or remove collaborators.
+                {t('invitations.only_owner_can_invite', { owner: getUserName(liveNotebook.owner_id) })}
               </div>
             )}
             {/* Current Active Members */}
             <div>
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2.5 flex items-center justify-between">
-                <span>Active Members</span>
+                <span>{t('invitations.active_members')}</span>
                 <span className="text-[11px] font-medium text-slate-400">
                   {liveNotebook.member_ids?.length || 1}
                 </span>
@@ -206,10 +206,10 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                           <p className="text-[11px] text-slate-400 flex items-center gap-1.5 truncate">
                             {isMemberOwner ? (
                               <span className="inline-flex items-center gap-1 text-indigo-600 font-bold">
-                                <Shield className="w-3 h-3" /> Owner
+                                <Shield className="w-3 h-3" /> {t('notebooks.role_owner')}
                               </span>
                             ) : (
-                              <span>Collaborator</span>
+                              <span>{t('common.collaborator')}</span>
                             )}
                             {emailDisplay && (
                               <>
@@ -226,7 +226,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                           type="button"
                           onClick={() => setMemberToRemove(memberId)}
                           className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition cursor-pointer"
-                          title="Remove member"
+                          title={t('invitations.remove_member_tooltip')}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -243,7 +243,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                 <h4 className="text-xs font-bold uppercase tracking-wider text-amber-700 mb-2.5 flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-amber-600" />
-                    <span>Pending Confirmation</span>
+                    <span>{t('invitations.pending_confirmation')}</span>
                   </span>
                   <span className="text-[11px] font-medium text-amber-600">
                     {pendingInvites.length}
@@ -268,7 +268,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                               {invite.email}
                             </p>
                             <span className="inline-block text-[10px] text-amber-700 font-medium">
-                              Waiting for invitee to confirm
+                              {t('invitations.waiting_for_confirmation')}
                             </span>
                           </div>
                         </div>
@@ -278,7 +278,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                             type="button"
                             onClick={() => handleCopyLink(inviteUrl, invite.id)}
                             className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white rounded-lg transition cursor-pointer"
-                            title="Copy Confirmation Link"
+                            title={t('invitations.copy_link_tooltip')}
                           >
                             {copiedId === invite.id ? (
                               <Check className="w-3.5 h-3.5 text-emerald-600" />
@@ -291,7 +291,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                               type="button"
                               onClick={() => handleRevoke(invite.id)}
                               className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
-                              title="Cancel / Revoke Invitation"
+                              title={t('invitations.revoke_tooltip')}
                             >
                               <X className="w-3.5 h-3.5" />
                             </button>
@@ -311,7 +311,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
               onClick={onClose}
               className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
             >
-              Done
+              {t('common.done')}
             </button>
           </div>
         </div>
@@ -320,9 +320,9 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
       {/* Global Delete Confirmation Modal */}
       <ConfirmModal
         isOpen={!!memberToRemove}
-        title="Remove Collaborator"
-        message={`Are you sure you want to remove this member from the notebook? They will lose access to its transactions.`}
-        confirmText="Remove"
+        title={t('invitations.remove_member_title')}
+        message={t('invitations.remove_member_message')}
+        confirmText={t('common.delete')}
         onConfirm={handleConfirmRemove}
         onCancel={() => setMemberToRemove(null)}
       />

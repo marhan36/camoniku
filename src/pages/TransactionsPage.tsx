@@ -5,7 +5,7 @@ import { useMetadataStore } from '@/store/useMetadataStore'
 import { useSettingsStore } from '@/store/useSettingsStore'
 import { useUserDirectoryStore } from '@/store/useUserDirectoryStore'
 import { formatCurrency } from '@/utils/currency'
-import { formatDisplayDate } from '@/utils/date'
+import { formatDisplayDate, getLocalizedMonthName } from '@/utils/date'
 import { exportTransactionsToExcel } from '@/utils/export'
 import { Transaction } from '@/types'
 import { TransactionModal } from '@/components/modals/TransactionModal'
@@ -31,7 +31,7 @@ const INITIAL_LOAD_COUNT = 25
 const LOAD_MORE_STEP = 20
 
 export const TransactionsPage: React.FC = () => {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { getActiveNotebook } = useNotebookStore()
   const { transactions, deleteTransaction } = useTransactionStore()
   const { classifications, categories } = useMetadataStore()
@@ -204,8 +204,7 @@ export const TransactionsPage: React.FC = () => {
   // Auto load more when scrolling near bottom
   useEffect(() => {
     if (!hasMore) return
-
-    const observer = new IntersectionObserver(
+  const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
           setVisibleCount((prev) => Math.min(prev + LOAD_MORE_STEP, totalItems))
@@ -291,7 +290,7 @@ export const TransactionsPage: React.FC = () => {
           {/* Month / Year */}
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-              Month & Year
+              {t('transactions.month_and_year')}
             </label>
             <div className="flex gap-2">
               <select
@@ -301,7 +300,7 @@ export const TransactionsPage: React.FC = () => {
               >
                 {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                   <option key={m} value={m}>
-                    {new Date(2000, m - 1, 1).toLocaleString('default', { month: 'long' })}
+                    {getLocalizedMonthName(m, i18n.language)}
                   </option>
                 ))}
               </select>
@@ -322,7 +321,7 @@ export const TransactionsPage: React.FC = () => {
           {/* Search */}
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-              Search
+              {t('transactions.search')}
             </label>
             <div className="relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
@@ -382,7 +381,7 @@ export const TransactionsPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2 ml-auto">
-            <span className="text-slate-400 font-medium">Sort:</span>
+            <span className="text-slate-400 font-medium">{t('transactions.sort')}</span>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
@@ -426,9 +425,9 @@ export const TransactionsPage: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm">
                   {displayedTransactions.map((tx) => {
-                    const categoryName = categoryMap.get(tx.category_id) || 'Uncategorized'
+                    const categoryName = categoryMap.get(tx.category_id) || t('dashboard.uncategorized')
                     const classificationName =
-                      classificationMap.get(tx.classification_id) || 'Unclassified'
+                      classificationMap.get(tx.classification_id) || t('dashboard.unclassified')
 
                     return (
                       <tr key={tx.id} className="hover:bg-slate-50/70 transition">
@@ -460,7 +459,7 @@ export const TransactionsPage: React.FC = () => {
                               type="button"
                               onClick={() => setEditingTransaction(tx)}
                               className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition cursor-pointer"
-                              title="Edit transaction"
+                              title={t('transactions.edit_tooltip')}
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
@@ -468,7 +467,7 @@ export const TransactionsPage: React.FC = () => {
                               type="button"
                               onClick={() => setDeletingTransactionId(tx.id)}
                               className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
-                              title="Delete transaction"
+                              title={t('transactions.delete_tooltip')}
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -484,9 +483,9 @@ export const TransactionsPage: React.FC = () => {
             {/* Mobile Card List */}
             <div className="md:hidden divide-y divide-slate-100">
               {displayedTransactions.map((tx) => {
-                const categoryName = categoryMap.get(tx.category_id) || 'Uncategorized'
+                const categoryName = categoryMap.get(tx.category_id) || t('dashboard.uncategorized')
                 const classificationName =
-                  classificationMap.get(tx.classification_id) || 'Unclassified'
+                  classificationMap.get(tx.classification_id) || t('dashboard.unclassified')
 
                 return (
                   <div key={tx.id} className="p-4 space-y-2 hover:bg-slate-50/70 transition">
@@ -514,7 +513,7 @@ export const TransactionsPage: React.FC = () => {
 
                     <div className="flex items-center justify-between pt-1">
                       <span className="text-[11px] text-slate-400">
-                        By: {getUserName(tx.user_id, false, tx.user_name)}
+                        {t('transactions.by')} {getUserName(tx.user_id, false, tx.user_name)}
                       </span>
                       <div className="flex items-center gap-1">
                         <button
@@ -550,7 +549,7 @@ export const TransactionsPage: React.FC = () => {
                     <span>{t('transactions.loading_more')}</span>
                   </div>
                   <span className="text-[11px] text-slate-400">
-                    {displayedTransactions.length} of {totalItems}
+                    {displayedTransactions.length} {t('transactions.of')} {totalItems}
                   </span>
                   <button
                     type="button"
@@ -586,7 +585,7 @@ export const TransactionsPage: React.FC = () => {
       <ConfirmModal
         isOpen={!!deletingTransactionId}
         title={t('modals.confirm_delete_title')}
-        message="Are you sure you want to delete this expense? This action cannot be undone."
+        message={t('transactions.confirm_delete_message')}
         confirmText={t('modals.confirm')}
         cancelText={t('modals.cancel')}
         isLoading={isDeleting}

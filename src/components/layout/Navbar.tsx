@@ -49,7 +49,7 @@ export const Navbar: React.FC = () => {
                   value={activeNotebookId || ''}
                   onChange={(e) => setActiveNotebookId(e.target.value)}
                   className="appearance-none bg-slate-100/80 hover:bg-slate-200/80 border border-slate-200 text-xs font-semibold text-slate-800 rounded-xl pl-3 pr-8 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition cursor-pointer max-w-[150px] sm:max-w-[200px] truncate"
-                  title="Switch Active Notebook"
+                  title={t('nav.switch_notebook')}
                 >
                   {notebooks.map((nb) => (
                     <option key={nb.id} value={nb.id}>

@@ -142,7 +142,7 @@ export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
           {/* Options List */}
           <div className="max-h-52 overflow-y-auto space-y-0.5">
             {options.length === 0 ? (
-              <p className="text-center py-3 text-xs text-slate-400">No options</p>
+              <p className="text-center py-3 text-xs text-slate-400">{t('common.no_options')}</p>
             ) : (
               options.map((option) => {
                 const isSelected = selectedIds.includes(option.id)

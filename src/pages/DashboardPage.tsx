@@ -7,7 +7,7 @@ import { useSettingsStore } from '@/store/useSettingsStore'
 import { useAuthStore } from '@/store/useAuthStore'
 import { useUserDirectoryStore } from '@/store/useUserDirectoryStore'
 import { formatCurrency } from '@/utils/currency'
-import { formatDisplayDate } from '@/utils/date'
+import { formatDisplayDate, getLocalizedMonthYear } from '@/utils/date'
 import { EmptyState } from '@/components/common/EmptyState'
 import { TransactionModal } from '@/components/modals/TransactionModal'
 import {
@@ -47,7 +47,7 @@ const CHART_COLORS = [
 ]
 
 export const DashboardPage: React.FC = () => {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const { getActiveNotebook } = useNotebookStore()
   const { transactions } = useTransactionStore()
@@ -118,9 +118,9 @@ export const DashboardPage: React.FC = () => {
     currentMonthTransactions.forEach((tx) => {
       let key = 'Other'
       if (groupBy === 'category') {
-        key = categoryMap.get(tx.category_id) || 'Uncategorized'
+        key = categoryMap.get(tx.category_id) || t('dashboard.uncategorized')
       } else if (groupBy === 'classification') {
-        key = classificationMap.get(tx.classification_id) || 'Unclassified'
+        key = classificationMap.get(tx.classification_id) || t('dashboard.unclassified')
       } else if (groupBy === 'user') {
         key = getUserName(tx.user_id, true, tx.user_name)
       }
@@ -130,7 +130,7 @@ export const DashboardPage: React.FC = () => {
     return Array.from(map.entries())
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
-  }, [currentMonthTransactions, groupBy, categoryMap, classificationMap, getUserName])
+  }, [currentMonthTransactions, groupBy, categoryMap, classificationMap, getUserName, t])
 
   return (
     <div className="space-y-6">
@@ -144,7 +144,7 @@ export const DashboardPage: React.FC = () => {
             {formatCurrency(totalAmount, currency)}
           </h1>
           <p className="mt-1 text-xs sm:text-sm text-indigo-200">
-            {t('dashboard.total_expenses_month')} ({new Date().toLocaleString('default', { month: 'long', year: 'numeric' })})
+            {t('dashboard.total_expenses_month')} ({getLocalizedMonthYear(new Date(), i18n.language)})
           </p>
         </div>
 
@@ -171,7 +171,7 @@ export const DashboardPage: React.FC = () => {
             <h3 className="text-lg font-bold text-slate-900 mt-0.5">
               {formatCurrency(dailyAverage, currency)}
             </h3>
-            <p className="text-[11px] text-slate-400">across {daysInCurrentMonthPassed} days</p>
+            <p className="text-[11px] text-slate-400">{t('dashboard.across_days', { count: daysInCurrentMonthPassed })}</p>
           </div>
         </div>
 
@@ -186,7 +186,7 @@ export const DashboardPage: React.FC = () => {
             <h3 className="text-lg font-bold text-slate-900 mt-0.5">
               {currentMonthTransactions.length}
             </h3>
-            <p className="text-[11px] text-slate-400">this month</p>
+            <p className="text-[11px] text-slate-400">{t('dashboard.this_month')}</p>
           </div>
         </div>
 
@@ -196,12 +196,12 @@ export const DashboardPage: React.FC = () => {
           </div>
           <div>
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Total Recorded
+              {t('dashboard.total_recorded')}
             </p>
             <h3 className="text-lg font-bold text-slate-900 mt-0.5">
               {transactions.filter((t) => t.notebook_id === notebookId).length}
             </h3>
-            <p className="text-[11px] text-slate-400">all time in notebook</p>
+            <p className="text-[11px] text-slate-400">{t('dashboard.all_time_in_notebook')}</p>
           </div>
         </div>
       </div>
@@ -215,7 +215,7 @@ export const DashboardPage: React.FC = () => {
               <h2 className="text-base font-bold text-slate-900">
                 {t('dashboard.spending_breakdown')}
               </h2>
-              <p className="text-xs text-slate-400">Current month distribution</p>
+              <p className="text-xs text-slate-400">{t('dashboard.current_month_distribution')}</p>
             </div>
 
             {/* Group By Selector */}
@@ -263,12 +263,12 @@ export const DashboardPage: React.FC = () => {
           <div
             className="flex-1 min-h-[280px] flex items-center justify-center cursor-pointer group"
             onClick={() => navigate('/reports')}
-            title="Click to view detailed reports"
+            title={t('dashboard.click_to_view_detailed_reports')}
           >
             {chartData.length === 0 ? (
               <EmptyState
                 icon={PieIcon}
-                title="No expenses this month"
+                title={t('dashboard.no_expenses_month')}
                 description={t('dashboard.add_first_transaction')}
                 actionLabel={t('dashboard.add_transaction')}
                 onAction={() => setIsAddTxOpen(true)}
@@ -323,7 +323,7 @@ export const DashboardPage: React.FC = () => {
               <h2 className="text-base font-bold text-slate-900">
                 {t('dashboard.recent_transactions')}
               </h2>
-              <p className="text-xs text-slate-400">Latest activity</p>
+              <p className="text-xs text-slate-400">{t('dashboard.latest_activity')}</p>
             </div>
             <Link
               to="/transactions"
@@ -344,7 +344,7 @@ export const DashboardPage: React.FC = () => {
               </p>
             ) : (
               recentTransactions.map((tx) => {
-                const categoryName = categoryMap.get(tx.category_id) || 'General'
+                const categoryName = categoryMap.get(tx.category_id) || t('dashboard.general')
                 const classificationName = classificationMap.get(tx.classification_id) || ''
 
                 return (

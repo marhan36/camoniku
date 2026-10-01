@@ -3,10 +3,9 @@ import { useNotebookStore } from '@/store/useNotebookStore'
 import { useTransactionStore } from '@/store/useTransactionStore'
 import { useMetadataStore } from '@/store/useMetadataStore'
 import { useSettingsStore } from '@/store/useSettingsStore'
-import { useAuthStore } from '@/store/useAuthStore'
 import { useUserDirectoryStore } from '@/store/useUserDirectoryStore'
 import { formatCurrency } from '@/utils/currency'
-import { formatDisplayDate } from '@/utils/date'
+import { formatDisplayDate, getLocalizedMonthName, getLocalizedMonthYear } from '@/utils/date'
 import { exportElementToPdf } from '@/utils/export'
 import { EmptyState } from '@/components/common/EmptyState'
 import {
@@ -15,13 +14,10 @@ import {
   TrendingUp,
   Receipt,
   Flame,
-  PieChart as PieIcon,
-  BarChart3,
   Calendar,
   Loader2,
   Tag,
   Folder,
-  User as UserIcon,
 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -54,10 +50,9 @@ const CHART_COLORS = [
 ]
 
 export const ReportsPage: React.FC = () => {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { getActiveNotebook } = useNotebookStore()
   const { transactions } = useTransactionStore()
-  const { user } = useAuthStore()
   const { classifications, categories } = useMetadataStore()
   const { dateFormat } = useSettingsStore()
   const { getUserName, fetchUsers } = useUserDirectoryStore()
@@ -171,19 +166,19 @@ export const ReportsPage: React.FC = () => {
   const categoryChartData = useMemo(() => {
     const map = new Map<string, number>()
     monthTransactions.forEach((tx) => {
-      const name = categoryMap.get(tx.category_id) || 'Uncategorized'
+      const name = categoryMap.get(tx.category_id) || t('dashboard.uncategorized')
       map.set(name, (map.get(name) || 0) + tx.amount)
     })
     return Array.from(map.entries())
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
-  }, [monthTransactions, categoryMap])
+  }, [monthTransactions, categoryMap, t])
 
   // Expenses by Classification
   const classificationBreakdown = useMemo(() => {
     const map = new Map<string, { total: number; count: number }>()
     monthTransactions.forEach((tx) => {
-      const name = classificationMap.get(tx.classification_id) || 'Unclassified'
+      const name = classificationMap.get(tx.classification_id) || t('dashboard.unclassified')
       const curr = map.get(name) || { total: 0, count: 0 }
       map.set(name, { total: curr.total + tx.amount, count: curr.count + 1 })
     })
@@ -192,7 +187,7 @@ export const ReportsPage: React.FC = () => {
       ...data,
       share: totalAmount > 0 ? (data.total / totalAmount) * 100 : 0,
     }))
-  }, [monthTransactions, classificationMap, totalAmount])
+  }, [monthTransactions, classificationMap, totalAmount, t])
 
   // Detailed Member Data with Category & Classification breakdown
   const memberDetailedData = useMemo(() => {
@@ -222,10 +217,10 @@ export const ReportsPage: React.FC = () => {
       m.total += tx.amount
       m.count += 1
 
-      const catName = categoryMap.get(tx.category_id) || 'Uncategorized'
+      const catName = categoryMap.get(tx.category_id) || t('dashboard.uncategorized')
       m.categories.set(catName, (m.categories.get(catName) || 0) + tx.amount)
 
-      const clsName = classificationMap.get(tx.classification_id) || 'Unclassified'
+      const clsName = classificationMap.get(tx.classification_id) || t('dashboard.unclassified')
       m.classifications.set(clsName, (m.classifications.get(clsName) || 0) + tx.amount)
     })
 
@@ -257,7 +252,7 @@ export const ReportsPage: React.FC = () => {
         }
       })
       .sort((a, b) => b.amount - a.amount)
-  }, [monthTransactions, getUserName, categoryMap, classificationMap, totalAmount])
+  }, [monthTransactions, getUserName, categoryMap, classificationMap, totalAmount, t])
 
   // Stacked chart data according to selected stack mode (Category vs Classification)
   const { memberStackedChartData, memberStackKeys } = useMemo(() => {
@@ -298,19 +293,16 @@ export const ReportsPage: React.FC = () => {
         'printable-report-area',
         `camoniku-report-${selectedYear}-${String(selectedMonth).padStart(2, '0')}.pdf`
       )
-      toast.success('Report PDF exported successfully')
+      toast.success(t('reports.pdf_exported'))
     } catch (e) {
       console.error('PDF export failed:', e)
-      toast.error('Failed to export PDF report')
+      toast.error(t('reports.pdf_export_failed'))
     } finally {
       setIsExportingPdf(false)
     }
   }
 
-  const monthName = new Date(selectedYear, selectedMonth - 1, 1).toLocaleString('default', {
-    month: 'long',
-    year: 'numeric',
-  })
+  const monthName = getLocalizedMonthYear(new Date(selectedYear, selectedMonth - 1, 1), i18n.language)
 
   return (
     <div className="space-y-6">
@@ -336,7 +328,7 @@ export const ReportsPage: React.FC = () => {
             >
               {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                 <option key={m} value={m}>
-                  {new Date(2000, m - 1, 1).toLocaleString('default', { month: 'short' })}
+                  {getLocalizedMonthName(m, i18n.language, 'short')}
                 </option>
               ))}
             </select>
@@ -376,13 +368,13 @@ export const ReportsPage: React.FC = () => {
           {/* Total Spent */}
           <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              Total Spent
+              {t('reports.total_spent')}
             </span>
             <h3 className="text-xl font-extrabold text-slate-900 mt-1">
               {formatCurrency(totalAmount, currency)}
             </h3>
             <p className="text-xs text-slate-500 mt-1">
-              {monthTransactions.length} transactions in {monthName}
+              {t('reports.transactions_in_month', { count: monthTransactions.length, month: monthName })}
             </p>
           </div>
 
@@ -398,12 +390,12 @@ export const ReportsPage: React.FC = () => {
               {momPercentage > 0 ? (
                 <span className="inline-flex items-center text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md">
                   <TrendingUp className="w-3.5 h-3.5 mr-0.5" />
-                  Increase
+                  {t('reports.increase')}
                 </span>
               ) : momPercentage < 0 ? (
                 <span className="inline-flex items-center text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
                   <TrendingDown className="w-3.5 h-3.5 mr-0.5" />
-                  Decrease
+                  {t('reports.decrease')}
                 </span>
               ) : (
                 <span className="text-xs text-slate-400">0%</span>
@@ -422,15 +414,15 @@ export const ReportsPage: React.FC = () => {
             <h3 className="text-xl font-extrabold text-slate-900 mt-1">
               {formatCurrency(averageDailySpend, currency)}
             </h3>
-            <p className="text-xs text-slate-500 mt-1">calculated across {daysInMonth} days</p>
+            <p className="text-xs text-slate-500 mt-1">{t('reports.calculated_across_days', { count: daysInMonth })}</p>
           </div>
         </div>
 
         {monthTransactions.length === 0 ? (
           <EmptyState
             icon={Receipt}
-            title="No transactions for this month"
-            description="Select a different month or record transactions to generate insightful financial analytics."
+            title={t('reports.no_transactions_month')}
+            description={t('reports.no_transactions_month_desc')}
           />
         ) : (
           <>
@@ -462,7 +454,7 @@ export const ReportsPage: React.FC = () => {
                       <Tooltip
                         formatter={(val: unknown) => [
                           formatCurrency(Number(val) || 0, currency),
-                          'Daily Spend',
+                          t('reports.daily_spend'),
                         ]}
                       />
                       <Line
@@ -484,7 +476,7 @@ export const ReportsPage: React.FC = () => {
                   <h3 className="text-base font-bold text-slate-900">
                     {t('reports.category_breakdown')}
                   </h3>
-                  <p className="text-xs text-slate-400">Proportions of monthly expense</p>
+                  <p className="text-xs text-slate-400">{t('reports.category_proportions')}</p>
                 </div>
                 <div className="h-64 mt-4 w-full">
                   <ResponsiveContainer width="100%" height="100%">
@@ -527,7 +519,7 @@ export const ReportsPage: React.FC = () => {
                       {t('reports.user_breakdown')}
                     </h3>
                     <p className="text-xs text-slate-400">
-                      Spending per member broken down by classification and category
+                      {t('reports.member_breakdown_desc')}
                     </p>
                   </div>
 
@@ -542,7 +534,7 @@ export const ReportsPage: React.FC = () => {
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
-                      {t('reports.by_category', 'By Category')}
+                      {t('reports.by_category')}
                     </button>
                     <button
                       type="button"
@@ -553,7 +545,7 @@ export const ReportsPage: React.FC = () => {
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
-                      {t('reports.by_classification', 'By Classification')}
+                      {t('reports.by_classification')}
                     </button>
                   </div>
                 </div>
@@ -600,7 +592,7 @@ export const ReportsPage: React.FC = () => {
                 {/* Detailed Member Breakdown Cards */}
                 <div className="pt-2 border-t border-slate-100">
                   <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4">
-                    {t('reports.member_expense_details', 'Member Expense Details')}
+                    {t('reports.member_expense_details')}
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {memberDetailedData.map((m) => (
@@ -617,7 +609,7 @@ export const ReportsPage: React.FC = () => {
                               <div className="min-w-0">
                                 <p className="font-bold text-sm text-slate-900 truncate">{m.name}</p>
                                 <p className="text-[11px] text-slate-500">
-                                  {m.count} {m.count === 1 ? 'transaction' : 'transactions'}
+                                  {m.count} {m.count === 1 ? t('reports.transaction') : t('reports.transactions')}
                                 </p>
                               </div>
                             </div>
@@ -626,7 +618,7 @@ export const ReportsPage: React.FC = () => {
                                 {formatCurrency(m.amount, currency)}
                               </p>
                               <p className="text-[11px] font-semibold text-slate-500">
-                                {m.share.toFixed(1)}% of total
+                                {m.share.toFixed(1)}% {t('reports.of_total')}
                               </p>
                             </div>
                           </div>
@@ -645,7 +637,7 @@ export const ReportsPage: React.FC = () => {
                           <div className="space-y-2">
                             <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-600">
                               <Tag className="w-3 h-3 text-indigo-500" />
-                              <span>{t('reports.categories_label', 'Categories')}</span>
+                              <span>{t('reports.categories_label')}</span>
                             </div>
                             <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                               {m.categories.map((c) => (
@@ -668,7 +660,7 @@ export const ReportsPage: React.FC = () => {
                           <div className="space-y-2">
                             <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-600">
                               <Folder className="w-3 h-3 text-violet-500" />
-                              <span>{t('reports.classifications_label', 'Classifications')}</span>
+                              <span>{t('reports.classifications_label')}</span>
                             </div>
                             <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                               {m.classifications.map((cls) => (
@@ -707,7 +699,7 @@ export const ReportsPage: React.FC = () => {
 
                 <div className="mt-4 divide-y divide-slate-100">
                   {topExpenses.map((tx, idx) => {
-                    const catName = categoryMap.get(tx.category_id) || 'General'
+                    const catName = categoryMap.get(tx.category_id) || t('dashboard.general')
                     return (
                       <div key={tx.id} className="py-3 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
@@ -736,9 +728,9 @@ export const ReportsPage: React.FC = () => {
               <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xs">
                 <div className="pb-4 border-b border-slate-100">
                   <h3 className="text-base font-bold text-slate-900">
-                    Classification Distribution
+                    {t('reports.classification_distribution')}
                   </h3>
-                  <p className="text-xs text-slate-400">Overall breakdown by purpose</p>
+                  <p className="text-xs text-slate-400">{t('reports.classification_distribution_desc')}</p>
                 </div>
 
                 <div className="mt-4 space-y-4">

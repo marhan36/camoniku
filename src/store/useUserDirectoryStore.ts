@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { db } from '@/lib/firebase/config'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { useAuthStore } from './useAuthStore'
+import i18n from '@/i18n'
 
 export interface UserProfile {
   id: string
@@ -52,7 +53,7 @@ export const useUserDirectoryStore = create<UserDirectoryState>((set, get) => ({
     showYou: boolean = false,
     fallbackName?: string | null
   ) => {
-    if (!userId) return fallbackName || 'User'
+    if (!userId) return fallbackName || i18n.t('common.user', 'User')
 
     const currentUser = useAuthStore.getState().user
     const isCurrent =
@@ -62,8 +63,8 @@ export const useUserDirectoryStore = create<UserDirectoryState>((set, get) => ({
         (currentUser.is_anonymous && (userId.startsWith('guest') || currentUser.id.startsWith('guest'))))
 
     if (isCurrent) {
-      const name = currentUser.name || (currentUser.is_anonymous ? 'Guest' : 'User')
-      return showYou ? `${name} (You)` : name
+      const name = currentUser.name || (currentUser.is_anonymous ? i18n.t('common.guest', 'Guest') : i18n.t('common.user', 'User'))
+      return showYou ? `${name} (${i18n.t('common.you', 'You')})` : name
     }
 
     // Check cached/live users directory first (always latest profile name)
@@ -85,11 +86,11 @@ export const useUserDirectoryStore = create<UserDirectoryState>((set, get) => ({
 
     // If it's a guest id
     if (userId.startsWith('guest') || userId === 'guest') {
-      return 'Guest'
+      return i18n.t('common.guest', 'Guest')
     }
 
     // Return Collaborator fallback instead of raw UID gibberish
-    return 'Collaborator'
+    return i18n.t('common.collaborator', 'Collaborator')
   },
 
   fetchUsers: (userIds: string[]) => {

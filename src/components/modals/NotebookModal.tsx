@@ -77,7 +77,7 @@ export const NotebookModal: React.FC<NotebookModalProps> = ({
               <BookOpen className="w-5 h-5" />
             </div>
             <h2 className="text-base font-bold text-slate-900">
-              {notebookToEdit ? 'Edit Notebook' : t('notebooks.create_notebook')}
+              {notebookToEdit ? t('notebooks.edit_notebook') : t('notebooks.create_notebook')}
             </h2>
           </div>
           <button
@@ -102,7 +102,7 @@ export const NotebookModal: React.FC<NotebookModalProps> = ({
                 setName(e.target.value)
                 if (error) setError(null)
               }}
-              placeholder="e.g., Personal Finances, Family Home"
+              placeholder={t('notebooks.name_placeholder')}
               className={`w-full px-3.5 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 transition-all ${
                 error
                   ? 'border-rose-400 focus:ring-rose-200'
@@ -138,7 +138,7 @@ export const NotebookModal: React.FC<NotebookModalProps> = ({
               className="w-4 h-4 text-indigo-600 rounded-sm border-slate-300 focus:ring-indigo-500"
             />
             <label htmlFor="set_active" className="text-sm text-slate-700 select-none">
-              Set as active notebook for dashboard
+              {t('notebooks.set_as_active_checkbox')}
             </label>
           </div>
 
@@ -156,7 +156,7 @@ export const NotebookModal: React.FC<NotebookModalProps> = ({
               className="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
             >
               {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              {notebookToEdit ? 'Save Changes' : 'Create'}
+              {notebookToEdit ? t('common.save_changes') : t('common.create')}
             </button>
           </div>
         </form>

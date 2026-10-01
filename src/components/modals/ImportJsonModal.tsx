@@ -44,7 +44,7 @@ export const ImportJsonModal: React.FC<ImportJsonModalProps> = ({ isOpen, onClos
     }
 
     if (!selected.name.endsWith('.json')) {
-      setValidationError('Please select a valid .json file.')
+      setValidationError(t('validation.select_json_file'))
       setFile(null)
       return
     }
@@ -58,9 +58,7 @@ export const ImportJsonModal: React.FC<ImportJsonModalProps> = ({ isOpen, onClos
         setParsedData(validated)
       } catch (err: unknown) {
         console.error('Validation error:', err)
-        setValidationError(
-          'Invalid file format. The file is not a valid CamoniKu notebook backup.'
-        )
+        setValidationError(t('validation.invalid_json'))
       }
     }
     reader.readAsText(selected)
@@ -81,7 +79,7 @@ export const ImportJsonModal: React.FC<ImportJsonModalProps> = ({ isOpen, onClos
         const newNotebook = {
           ...parsedData.notebook,
           id: targetId,
-          name: `${parsedData.notebook.name} (Imported)`,
+          name: `${parsedData.notebook.name} ${t('modals.imported_suffix')}`,
           owner_id: userId,
           member_ids: [userId],
           created_at: now,
@@ -193,9 +191,9 @@ export const ImportJsonModal: React.FC<ImportJsonModalProps> = ({ isOpen, onClos
                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
                   <FileJson className="w-8 h-8 text-indigo-500 mb-2" />
                   <p className="text-xs text-slate-600 font-medium">
-                    {file ? file.name : 'Click to select .json file'}
+                    {file ? file.name : t('modals.click_to_select_json')}
                   </p>
-                  <p className="text-[11px] text-slate-400 mt-1">CamoniKu backup JSON</p>
+                  <p className="text-[11px] text-slate-400 mt-1">{t('modals.backup_json_sub')}</p>
                 </div>
                 <input
                   type="file"
@@ -219,9 +217,9 @@ export const ImportJsonModal: React.FC<ImportJsonModalProps> = ({ isOpen, onClos
             <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-2 text-emerald-800 text-xs">
               <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold">Valid Backup Detected</p>
+                <p className="font-semibold">{t('modals.valid_backup_detected')}</p>
                 <p className="mt-0.5">
-                  Notebook: <b>{parsedData.notebook.name}</b> • {parsedData.transactions.length} transactions
+                  {t('notebooks.title')}: <b>{parsedData.notebook.name}</b> • {parsedData.transactions.length} {t('transactions.title').toLowerCase()}
                 </p>
               </div>
             </div>
@@ -293,7 +291,7 @@ export const ImportJsonModal: React.FC<ImportJsonModalProps> = ({ isOpen, onClos
               className="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
             >
               {isImporting && <Loader2 className="w-4 h-4 animate-spin" />}
-              Import
+              {t('modals.import_btn')}
             </button>
           </div>
         </div>

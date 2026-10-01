@@ -100,7 +100,7 @@ export const AddMetadataModal: React.FC<AddMetadataModalProps> = ({
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
-              Name
+              {t('common.name')}
             </label>
             <input
               type="text"
@@ -133,7 +133,7 @@ export const AddMetadataModal: React.FC<AddMetadataModalProps> = ({
               disabled={isSubmitting}
               className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl shadow-xs transition-colors cursor-pointer"
             >
-              {isSubmitting ? 'Saving...' : 'Add'}
+              {isSubmitting ? t('common.saving') : t('common.add')}
             </button>
           </div>
         </form>

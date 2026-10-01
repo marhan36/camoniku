@@ -39,3 +39,16 @@ export function getMonthYearRange(year: number, month: number) {
 export function getTodayISODate(): string {
   return format(new Date(), 'yyyy-MM-dd')
 }
+
+export function getLocalizedMonthName(dateOrMonth: Date | number, lang?: string, formatStyle: 'long' | 'short' = 'long'): string {
+  const d = typeof dateOrMonth === 'number' ? new Date(2000, dateOrMonth - 1, 1) : dateOrMonth
+  const locale = lang?.startsWith('id') ? 'id-ID' : 'en-US'
+  return d.toLocaleString(locale, { month: formatStyle })
+}
+
+export function getLocalizedMonthYear(dateOrYear: Date | { year: number; month: number }, lang?: string): string {
+  const d = dateOrYear instanceof Date ? dateOrYear : new Date(dateOrYear.year, dateOrYear.month - 1, 1)
+  const locale = lang?.startsWith('id') ? 'id-ID' : 'en-US'
+  return d.toLocaleString(locale, { month: 'long', year: 'numeric' })
+}
+
