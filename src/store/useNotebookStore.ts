@@ -53,7 +53,7 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
     const user = useAuthStore.getState().user
     if (user && !user.is_anonymous && id) {
       try {
-        updateDoc(doc(db, 'users', user.id), { active_notebook_id: id })
+        setDoc(doc(db, 'users', user.id), { active_notebook_id: id }, { merge: true })
       } catch (e) {
         console.warn('Update user active notebook error:', e)
       }
@@ -115,7 +115,7 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
           await setDoc(doc(db, 'categories', cat.id), cat)
         }
         if (setAsActive) {
-          await updateDoc(doc(db, 'users', user.id), { active_notebook_id: newNotebook.id })
+          await setDoc(doc(db, 'users', user.id), { active_notebook_id: newNotebook.id }, { merge: true })
         }
       } catch (e) {
         console.warn('Error syncing created notebook to Firestore:', e)
@@ -203,7 +203,7 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
       localDB.setActiveNotebookId(newActiveId)
       if (user && !user.is_anonymous && newActiveId) {
         try {
-          updateDoc(doc(db, 'users', user.id), { active_notebook_id: newActiveId })
+          setDoc(doc(db, 'users', user.id), { active_notebook_id: newActiveId }, { merge: true })
         } catch (e) {
           console.warn('Update user active notebook error:', e)
         }
@@ -433,7 +433,7 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
 
       // Set user's active notebook
       try {
-        await updateDoc(doc(db, 'users', user.id), { active_notebook_id: targetNotebook.id })
+        await setDoc(doc(db, 'users', user.id), { active_notebook_id: targetNotebook.id }, { merge: true })
       } catch (e) {}
 
       // Cache user directory

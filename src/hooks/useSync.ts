@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { collection, query, where, onSnapshot } from 'firebase/firestore'
-import { db } from '@/lib/firebase/config'
+import { db, auth } from '@/lib/firebase/config'
 import { useAuthStore } from '@/store/useAuthStore'
 import { useNotebookStore } from '@/store/useNotebookStore'
 import { useMetadataStore } from '@/store/useMetadataStore'
@@ -42,8 +42,10 @@ export function useSync() {
 
   // 2. Real-time Firebase Sync for authenticated (non-anonymous) users
   useEffect(() => {
-    if (!user || user.is_anonymous) {
-      setSyncStatus('local_only')
+    if (!user || user.is_anonymous || !auth.currentUser) {
+      if (!user || user.is_anonymous) {
+        setSyncStatus('local_only')
+      }
       return
     }
 
@@ -117,7 +119,7 @@ export function useSync() {
 
   // 3. Listen to Classifications, Categories, Transactions for the Active Notebook
   useEffect(() => {
-    if (!user || user.is_anonymous || !activeNotebookId) {
+    if (!user || user.is_anonymous || !auth.currentUser || !activeNotebookId) {
       return
     }
 

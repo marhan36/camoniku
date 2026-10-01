@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { User } from '@/types'
-import { auth, googleProvider, signInWithPopup, firebaseSignOut, db } from '@/lib/firebase/config'
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'
+import { auth, googleProvider, signInWithPopup, firebaseSignOut, onAuthStateChanged, db } from '@/lib/firebase/config'
+import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { localDB } from '@/lib/storage/localStorage'
 import { generateDefaultData } from '@/utils/dummyData'
 import { toast } from 'sonner'
@@ -241,7 +241,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!user.is_anonymous) {
       try {
         const userDocRef = doc(db, 'users', user.id)
-        await updateDoc(userDocRef, { name: updated.name, updated_at: updated.updated_at })
+        await setDoc(userDocRef, { name: updated.name, updated_at: updated.updated_at }, { merge: true })
       } catch (e) {
         console.error('Error updating firestore user name:', e)
       }
@@ -267,15 +267,58 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ user: null })
   },
 
-  initAuth: async () => {
-    // Check local user first
-    const savedUser = localDB.getUser()
-    if (savedUser) {
-      set({ user: savedUser, isLoading: false, isInitialized: true })
-      return
-    }
-
-    // Otherwise, listen for firebase auth state
-    set({ isLoading: false, isInitialized: true })
+  initAuth: () => {
+    return new Promise<void>((resolve) => {
+      onAuthStateChanged(auth, async (fbUser) => {
+        if (fbUser) {
+          // Firebase authenticated user
+          const userDocRef = doc(db, 'users', fbUser.uid)
+          let userData: User
+          try {
+            const userSnap = await getDoc(userDocRef)
+            if (userSnap.exists()) {
+              userData = userSnap.data() as User
+            } else {
+              userData = {
+                id: fbUser.uid,
+                name: fbUser.displayName || 'CamoniKu User',
+                email: fbUser.email,
+                active_notebook_id: null,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                is_anonymous: false,
+              }
+              await setDoc(userDocRef, userData, { merge: true })
+            }
+          } catch (e) {
+            console.warn('Error fetching user doc in initAuth:', e)
+            userData = {
+              id: fbUser.uid,
+              name: fbUser.displayName || 'CamoniKu User',
+              email: fbUser.email,
+              active_notebook_id: null,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              is_anonymous: false,
+            }
+          }
+          localDB.setUser(userData)
+          set({ user: userData, isLoading: false, isInitialized: true })
+        } else {
+          // No active Firebase Auth session: fall back to guest if present
+          const savedUser = localDB.getUser()
+          if (savedUser && savedUser.is_anonymous) {
+            set({ user: savedUser, isLoading: false, isInitialized: true })
+          } else {
+            // Expired or logged out Google session
+            if (savedUser && !savedUser.is_anonymous) {
+              localDB.clearUserData()
+            }
+            set({ user: null, isLoading: false, isInitialized: true })
+          }
+        }
+        resolve()
+      })
+    })
   },
 }))
