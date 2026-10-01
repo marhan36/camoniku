@@ -171,7 +171,9 @@ export const DashboardPage: React.FC = () => {
             <h3 className="text-lg font-bold text-slate-900 mt-0.5">
               {formatCurrency(dailyAverage, currency)}
             </h3>
-            <p className="text-[11px] text-slate-400">{t('dashboard.across_days', { count: daysInCurrentMonthPassed })}</p>
+            <p className="text-[11px] text-slate-400">
+              {t('dashboard.across_days', { count: daysInCurrentMonthPassed, days: daysInCurrentMonthPassed })}
+            </p>
           </div>
         </div>
 
@@ -212,9 +214,13 @@ export const DashboardPage: React.FC = () => {
         <div className="lg:col-span-3 bg-white p-6 rounded-3xl border border-slate-100 shadow-xs flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
             <div>
-              <h2 className="text-base font-bold text-slate-900">
-                {t('dashboard.spending_breakdown')}
-              </h2>
+              <Link
+                to="/reports"
+                className="text-base font-bold text-slate-900 hover:text-indigo-600 transition flex items-center gap-1 group"
+              >
+                <span>{t('dashboard.spending_breakdown')}</span>
+                <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity text-indigo-600" />
+              </Link>
               <p className="text-xs text-slate-400">{t('dashboard.current_month_distribution')}</p>
             </div>
 
@@ -260,11 +266,7 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           {/* Chart Content */}
-          <div
-            className="flex-1 min-h-[280px] flex items-center justify-center cursor-pointer group"
-            onClick={() => navigate('/reports')}
-            title={t('dashboard.click_to_view_detailed_reports')}
-          >
+          <div className="flex-1 min-h-[280px] flex items-center justify-center">
             {chartData.length === 0 ? (
               <EmptyState
                 icon={PieIcon}
@@ -320,9 +322,13 @@ export const DashboardPage: React.FC = () => {
         <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-100 shadow-xs flex flex-col">
           <div className="flex items-center justify-between pb-4 border-b border-slate-100">
             <div>
-              <h2 className="text-base font-bold text-slate-900">
-                {t('dashboard.recent_transactions')}
-              </h2>
+              <Link
+                to="/transactions"
+                className="text-base font-bold text-slate-900 hover:text-indigo-600 transition flex items-center gap-1 group"
+              >
+                <span>{t('dashboard.recent_transactions')}</span>
+                <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity text-indigo-600" />
+              </Link>
               <p className="text-xs text-slate-400">{t('dashboard.latest_activity')}</p>
             </div>
             <Link
@@ -334,10 +340,7 @@ export const DashboardPage: React.FC = () => {
             </Link>
           </div>
 
-          <div
-            className="flex-1 mt-4 divide-y divide-slate-100 cursor-pointer"
-            onClick={() => navigate('/transactions')}
-          >
+          <div className="flex-1 mt-4 divide-y divide-slate-100">
             {recentTransactions.length === 0 ? (
               <p className="text-xs text-slate-400 text-center py-10">
                 {t('dashboard.no_recent_transactions')}
