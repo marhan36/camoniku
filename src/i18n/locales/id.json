@@ -194,7 +194,12 @@
     "no_notebooks": "Tidak ada buku catatan",
     "no_notebooks_desc": "Buat buku catatan pertama Anda untuk mengelompokkan transaksi ke ruang terpisah.",
     "delete_warning": "Apakah Anda yakin ingin menghapus buku catatan ini? Seluruh transaksi dan kategorinya akan dihapus permanen.",
-    "keep_at_least_one": "Anda harus menyisakan setidaknya 1 buku catatan milik Anda."
+    "keep_at_least_one": "Anda harus menyisakan setidaknya 1 buku catatan milik Anda.",
+    "transactions_count": "{{count}} transaksi",
+    "transactions_count_plural": "{{count}} transaksi",
+    "members_count": "{{count}} anggota",
+    "members_count_plural": "{{count}} anggota",
+    "pending": "menunggu"
   },
   "settings": {
     "title": "Pengaturan",

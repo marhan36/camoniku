@@ -194,7 +194,12 @@
     "no_notebooks": "No notebooks available",
     "no_notebooks_desc": "Create your first notebook to organize transactions into separate workspaces.",
     "delete_warning": "Are you sure you want to delete this notebook? All its transactions and categories will be permanently removed.",
-    "keep_at_least_one": "You must keep at least 1 notebook that you own."
+    "keep_at_least_one": "You must keep at least 1 notebook that you own.",
+    "transactions_count": "{{count}} transaction",
+    "transactions_count_plural": "{{count}} transactions",
+    "members_count": "{{count}} member",
+    "members_count_plural": "{{count}} members",
+    "pending": "pending"
   },
   "settings": {
     "title": "Settings",
