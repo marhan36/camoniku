@@ -49,7 +49,10 @@
     "guest_mode_desc": "Guest Mode: Data stored locally on this device",
     "offline_desc": "Device is offline",
     "syncing_desc": "Syncing changes with cloud",
-    "synced_desc": "All changes synced to cloud"
+    "synced_desc": "All changes synced to cloud",
+    "click_to_sync": "Click to refresh & sync now",
+    "sync_success": "Data synchronized with cloud",
+    "sync_failed": "Failed to sync with cloud"
   },
   "auth": {
     "welcome_title": "Take Control of Your Expenses",
@@ -342,6 +345,7 @@
     "member_removed": "Member removed from notebook",
     "profile_updated": "Profile saved",
     "data_imported": "Notebook data imported successfully",
+    "transaction_save_failed": "Failed to save transaction to cloud",
     "error_occurred": "An error occurred. Please try again."
   }
 }

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { collection, query, where, onSnapshot } from 'firebase/firestore'
+import { useEffect, useState, useCallback } from 'react'
+import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore'
 import { db, auth } from '@/lib/firebase/config'
 import { useAuthStore } from '@/store/useAuthStore'
 import { useNotebookStore } from '@/store/useNotebookStore'
@@ -8,6 +8,8 @@ import { useTransactionStore } from '@/store/useTransactionStore'
 import { useNetworkStore } from '@/store/useNetworkStore'
 import { useUserDirectoryStore } from '@/store/useUserDirectoryStore'
 import { Notebook, Classification, Category, Transaction } from '@/types'
+import { toast } from 'sonner'
+import i18n from '@/i18n'
 
 export function useSync() {
   const { user } = useAuthStore()
@@ -230,4 +232,103 @@ export function useSync() {
     setSyncStatus,
     retryTrigger,
   ])
+
+  // 4. Manual sync handler
+  const handleManualSync = useCallback(async () => {
+    if (!navigator.onLine) {
+      setSyncStatus('offline')
+      toast.error(i18n.t('sync.offline_desc', 'Device is offline'))
+      return
+    }
+
+    if (!user || user.is_anonymous || !auth.currentUser) {
+      toast.info(i18n.t('sync.guest_mode_desc', 'Guest Mode: Data stored locally on this device'))
+      return
+    }
+
+    try {
+      setSyncStatus('syncing')
+      const currentUid = auth.currentUser.uid
+
+      // 1. Re-fetch user's notebooks
+      const notebooksRef = collection(db, 'notebooks')
+      const qNotebooks = query(notebooksRef, where('member_ids', 'array-contains', currentUid))
+      const nbSnapshot = await getDocs(qNotebooks)
+      const loadedNotebooks: Notebook[] = []
+      nbSnapshot.forEach((docSnap) => {
+        loadedNotebooks.push(docSnap.data() as Notebook)
+      })
+
+      if (loadedNotebooks.length > 0) {
+        setNotebooks(loadedNotebooks)
+        const allUserIds: string[] = []
+        loadedNotebooks.forEach((nb) => {
+          if (nb.owner_id) allUserIds.push(nb.owner_id)
+          if (nb.member_ids) allUserIds.push(...nb.member_ids)
+        })
+        useUserDirectoryStore.getState().fetchUsers(allUserIds)
+      } else {
+        setNotebooks([])
+      }
+
+      // 2. If active notebook exists, re-fetch its metadata and transactions
+      const curActiveId = useNotebookStore.getState().activeNotebookId
+      if (curActiveId) {
+        const classRef = collection(db, 'classifications')
+        const qClass = query(classRef, where('notebook_id', '==', curActiveId))
+        const classSnap = await getDocs(qClass)
+        const classItems: Classification[] = []
+        classSnap.forEach((d) => classItems.push(d.data() as Classification))
+        if (classItems.length > 0) {
+          syncNotebookClassifications(curActiveId, classItems)
+        } else {
+          await ensureNotebookMetadata(curActiveId)
+        }
+
+        const catRef = collection(db, 'categories')
+        const qCat = query(catRef, where('notebook_id', '==', curActiveId))
+        const catSnap = await getDocs(qCat)
+        const catItems: Category[] = []
+        catSnap.forEach((d) => catItems.push(d.data() as Category))
+        if (catItems.length > 0) {
+          syncNotebookCategories(curActiveId, catItems)
+        } else {
+          await ensureNotebookMetadata(curActiveId)
+        }
+
+        const txRef = collection(db, 'transactions')
+        const qTx = query(txRef, where('notebook_id', '==', curActiveId))
+        const txSnap = await getDocs(qTx)
+        const txItems: Transaction[] = []
+        txSnap.forEach((d) => txItems.push(d.data() as Transaction))
+        setTransactions(txItems)
+        const txAuthors = txItems.map((t) => t.user_id).filter(Boolean)
+        useUserDirectoryStore.getState().fetchUsers(txAuthors)
+      }
+
+      setRetryTrigger((c) => c + 1)
+      setSyncStatus('synced')
+      toast.success(i18n.t('sync.sync_success', 'Data synchronized with cloud'))
+    } catch (err: unknown) {
+      console.error('Manual sync error:', err)
+      setSyncStatus(navigator.onLine ? 'synced' : 'offline')
+      const msg = err instanceof Error ? err.message : 'Unknown error'
+      toast.error(`${i18n.t('sync.sync_failed', 'Failed to sync with cloud')}: ${msg}`)
+    }
+  }, [
+    user,
+    setNotebooks,
+    setTransactions,
+    syncNotebookClassifications,
+    syncNotebookCategories,
+    ensureNotebookMetadata,
+    setSyncStatus,
+  ])
+
+  useEffect(() => {
+    useNetworkStore.getState().setManualSyncFn(handleManualSync)
+    return () => {
+      useNetworkStore.getState().setManualSyncFn(null)
+    }
+  }, [handleManualSync])
 }

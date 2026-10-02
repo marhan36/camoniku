@@ -5,7 +5,7 @@ import { WifiOff, RefreshCw, CheckCircle2, HardDrive } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 export const NetworkStatusIndicator: React.FC = () => {
-  const { isOnline, syncStatus } = useNetworkStore()
+  const { isOnline, syncStatus, syncNow } = useNetworkStore()
   const { user } = useAuthStore()
   const { t } = useTranslation()
 
@@ -25,13 +25,15 @@ export const NetworkStatusIndicator: React.FC = () => {
   // 2. Disconnected / Offline
   if (!isOnline || syncStatus === 'offline') {
     return (
-      <div
-        title={`${t('sync.offline')} - ${t('sync.offline_desc')}`}
-        className="inline-flex items-center gap-1.5 px-2 py-1 lg:px-2.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200 shadow-2xs whitespace-nowrap shrink-0"
+      <button
+        type="button"
+        onClick={() => syncNow()}
+        title={`${t('sync.offline')} • ${t('sync.click_to_sync')}`}
+        className="inline-flex items-center gap-1.5 px-2 py-1 lg:px-2.5 rounded-full text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 shadow-2xs whitespace-nowrap shrink-0 transition-all cursor-pointer active:scale-95"
       >
         <WifiOff className="w-3.5 h-3.5 text-rose-600 shrink-0" />
         <span className="hidden lg:inline whitespace-nowrap">{t('sync.offline')}</span>
-      </div>
+      </button>
     )
   }
 
@@ -48,14 +50,17 @@ export const NetworkStatusIndicator: React.FC = () => {
     )
   }
 
-  // 4. Authenticated & fully synced
+  // 4. Authenticated & fully synced (Clickable to force cloud sync)
   return (
-    <div
-      title={`${t('sync.synced')} - ${t('sync.synced_desc')}`}
-      className="inline-flex items-center gap-1.5 px-2 py-1 lg:px-2.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs whitespace-nowrap shrink-0"
+    <button
+      type="button"
+      onClick={() => syncNow()}
+      title={`${t('sync.synced')} • ${t('sync.click_to_sync')}`}
+      className="inline-flex items-center gap-1.5 px-2 py-1 lg:px-2.5 rounded-full text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-800 border border-emerald-200 shadow-2xs whitespace-nowrap shrink-0 transition-all cursor-pointer active:scale-95 group"
     >
-      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 group-hover:hidden" />
+      <RefreshCw className="w-3.5 h-3.5 text-emerald-600 shrink-0 hidden group-hover:inline-block" />
       <span className="hidden lg:inline whitespace-nowrap">{t('sync.synced')}</span>
-    </div>
+    </button>
   )
 }

@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { Notebook, PendingMemberInvite, NotebookInvitation } from '@/types'
 import { localDB } from '@/lib/storage/localStorage'
 import { db } from '@/lib/firebase/config'
-import { doc, setDoc, deleteDoc, updateDoc, getDoc } from 'firebase/firestore'
+import { doc, setDoc, deleteDoc, updateDoc, getDoc, arrayUnion } from 'firebase/firestore'
 import { useAuthStore } from './useAuthStore'
 import { useUserDirectoryStore } from './useUserDirectoryStore'
 import { toast } from 'sonner'
@@ -408,7 +408,7 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
       // Update in Firestore
       try {
         await updateDoc(doc(db, 'notebooks', targetNotebook.id), {
-          member_ids: updatedMembers,
+          member_ids: arrayUnion(user.id),
           pending_invites: updatedPending,
           updated_at: now,
         })

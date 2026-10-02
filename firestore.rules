@@ -42,11 +42,8 @@ service cloud.firestore {
     // 2. Notebooks Collection (/notebooks/{notebookId})
     // =========================================================================
     match /notebooks/{notebookId} {
-      // GET: Allowed if the user is in member_ids OR is the owner
-      allow get: if isAuthenticated() && (
-        resource.data.owner_id == request.auth.uid ||
-        request.auth.uid in resource.data.member_ids
-      );
+      // GET: Allowed for authenticated users to inspect notebook details and accept invitations
+      allow get: if isAuthenticated();
 
       // LIST: Exactly matches query where('member_ids', 'array-contains', request.auth.uid)
       allow list: if isAuthenticated() && (

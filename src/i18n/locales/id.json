@@ -49,7 +49,10 @@
     "guest_mode_desc": "Mode Tamu: Data disimpan lokal di perangkat ini",
     "offline_desc": "Perangkat offline",
     "syncing_desc": "Menyinkronkan perubahan ke cloud",
-    "synced_desc": "Semua perubahan tersinkron ke cloud"
+    "synced_desc": "Semua perubahan tersinkron ke cloud",
+    "click_to_sync": "Klik untuk menyegarkan & sinkronkan",
+    "sync_success": "Data berhasil disinkronkan dengan cloud",
+    "sync_failed": "Gagal menyinkronkan dengan cloud"
   },
   "auth": {
     "welcome_title": "Kendali Penuh Keuangan Anda",
@@ -342,6 +345,7 @@
     "member_removed": "Anggota berhasil dihapus dari buku",
     "profile_updated": "Profil berhasil disimpan",
     "data_imported": "Data buku catatan berhasil diimpor",
+    "transaction_save_failed": "Gagal menyimpan pengeluaran ke cloud",
     "error_occurred": "Terjadi kesalahan. Silakan coba lagi."
   }
 }
