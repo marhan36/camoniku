@@ -97,7 +97,27 @@ export const DashboardPage: React.FC = () => {
   const recentTransactions = useMemo(() => {
     return [...transactions]
       .filter((t) => t.notebook_id === notebookId)
-      .sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime())
+      .sort((a, b) => {
+        const getDateMs = (tx: (typeof a)) => {
+          if (!tx.transaction_date) return 0
+          const parts = tx.transaction_date.split('T')[0].split('-')
+          if (parts.length === 3) {
+            return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])).getTime()
+          }
+          return new Date(tx.transaction_date).getTime()
+        }
+        const getCreatedMs = (tx: (typeof a)) => (tx.created_at ? new Date(tx.created_at).getTime() : 0)
+
+        const dateA = getDateMs(a)
+        const dateB = getDateMs(b)
+        if (dateB !== dateA) return dateB - dateA
+
+        const createdA = getCreatedMs(a)
+        const createdB = getCreatedMs(b)
+        if (createdB !== createdA) return createdB - createdA
+
+        return b.id.localeCompare(a.id)
+      })
       .slice(0, 5)
   }, [transactions, notebookId])
 

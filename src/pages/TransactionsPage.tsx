@@ -152,17 +152,40 @@ export const TransactionsPage: React.FC = () => {
         return true
       })
       .sort((a, b) => {
+        const getDateMs = (tx: (typeof a)) => {
+          if (!tx.transaction_date) return 0
+          const parts = tx.transaction_date.split('T')[0].split('-')
+          if (parts.length === 3) {
+            return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])).getTime()
+          }
+          return new Date(tx.transaction_date).getTime()
+        }
+        const getCreatedMs = (tx: (typeof a)) => (tx.created_at ? new Date(tx.created_at).getTime() : 0)
+
+        const dateA = getDateMs(a)
+        const dateB = getDateMs(b)
+        const createdA = getCreatedMs(a)
+        const createdB = getCreatedMs(b)
+
         if (sortBy === 'newest') {
-          return new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime()
+          if (dateB !== dateA) return dateB - dateA
+          if (createdB !== createdA) return createdB - createdA
+          return b.id.localeCompare(a.id)
         }
         if (sortBy === 'oldest') {
-          return new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime()
+          if (dateA !== dateB) return dateA - dateB
+          if (createdA !== createdB) return createdA - createdB
+          return a.id.localeCompare(b.id)
         }
         if (sortBy === 'lowest') {
-          return a.amount - b.amount
+          if (a.amount !== b.amount) return a.amount - b.amount
+          if (dateB !== dateA) return dateB - dateA
+          return createdB - createdA
         }
         if (sortBy === 'highest') {
-          return b.amount - a.amount
+          if (a.amount !== b.amount) return b.amount - a.amount
+          if (dateB !== dateA) return dateB - dateA
+          return createdB - createdA
         }
         return 0
       })
