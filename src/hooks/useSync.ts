@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { collection, query, where, onSnapshot } from 'firebase/firestore'
 import { db, auth } from '@/lib/firebase/config'
 import { useAuthStore } from '@/store/useAuthStore'
@@ -7,37 +7,45 @@ import { useMetadataStore } from '@/store/useMetadataStore'
 import { useTransactionStore } from '@/store/useTransactionStore'
 import { useNetworkStore } from '@/store/useNetworkStore'
 import { useUserDirectoryStore } from '@/store/useUserDirectoryStore'
-import { localDB } from '@/lib/storage/localStorage'
 import { Notebook, Classification, Category, Transaction } from '@/types'
 
 export function useSync() {
   const { user } = useAuthStore()
-  const { activeNotebookId, notebooks, setNotebooks } = useNotebookStore()
+  const { activeNotebookId, setNotebooks } = useNotebookStore()
   const { syncNotebookClassifications, syncNotebookCategories, ensureNotebookMetadata } = useMetadataStore()
   const { setTransactions } = useTransactionStore()
   const { setOnline, setSyncStatus } = useNetworkStore()
+  const [retryTrigger, setRetryTrigger] = useState(0)
 
-  // 1. Online / Offline window listeners
+  // 1. Online / Offline & Visibility window listeners
   useEffect(() => {
     const handleOnline = () => {
       setOnline(true)
       if (user?.is_anonymous) {
         setSyncStatus('local_only')
       } else {
-        setSyncStatus('synced')
+        setSyncStatus('syncing')
+        setRetryTrigger((c) => c + 1)
       }
     }
     const handleOffline = () => {
       setOnline(false)
       setSyncStatus('offline')
     }
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine && user && !user.is_anonymous) {
+        setRetryTrigger((c) => c + 1)
+      }
+    }
 
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
+    document.addEventListener('visibilitychange', handleVisibility)
 
     return () => {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
+      document.removeEventListener('visibilitychange', handleVisibility)
     }
   }, [user, setOnline, setSyncStatus])
 
@@ -57,6 +65,8 @@ export function useSync() {
     const notebooksRef = collection(db, 'notebooks')
     const qNotebooks = query(notebooksRef, where('member_ids', 'array-contains', currentUid))
 
+    let retryTimer: ReturnType<typeof setTimeout> | null = null
+
     const unsubNotebooks = onSnapshot(
       qNotebooks,
       (snapshot) => {
@@ -72,24 +82,21 @@ export function useSync() {
             if (nb.member_ids) allUserIds.push(...nb.member_ids)
           })
           useUserDirectoryStore.getState().fetchUsers(allUserIds)
-          setSyncStatus('synced')
         } else {
-          // If the authenticated user has zero notebooks in this Firestore DB (e.g. wiped collections),
-          // automatically create a default onboarding notebook so the user is never stuck in an invalid state.
-          const { notebooks: existingNbs, createNotebook } = useNotebookStore.getState()
-          if (existingNbs.length === 0 || existingNbs.every((n) => n.owner_id?.startsWith('guest'))) {
-            const lang = (localDB.getSettings().language || 'en') as 'en' | 'id'
-            const defaultName = lang === 'id' ? 'Catatan Pengeluaran' : 'My Expenses'
-            createNotebook(defaultName, 'IDR', true).catch((e) => {
-              console.warn('Auto-create default notebook error:', e)
-            })
-          }
-          setSyncStatus('synced')
+          setNotebooks([])
         }
+        setSyncStatus('synced')
       },
       (err) => {
         console.warn('Notebooks sync warning:', err)
-        setSyncStatus('offline')
+        if (!navigator.onLine) {
+          setSyncStatus('offline')
+        } else {
+          setSyncStatus('syncing')
+          retryTimer = setTimeout(() => {
+            if (navigator.onLine) setRetryTrigger((c) => c + 1)
+          }, 3000)
+        }
       }
     )
 
@@ -126,10 +133,11 @@ export function useSync() {
     )
 
     return () => {
+      if (retryTimer) clearTimeout(retryTimer)
       unsubNotebooks()
       unsubInv()
     }
-  }, [user, setNotebooks, setSyncStatus])
+  }, [user?.id, setNotebooks, setSyncStatus, retryTrigger])
 
   // 3. Listen to Classifications, Categories, Transactions for the Active Notebook
   useEffect(() => {
@@ -137,13 +145,14 @@ export function useSync() {
       return
     }
 
-    // Safety guard: only listen to Firestore if the active notebook actually belongs to user's loaded notebooks
-    const currentNotebook = notebooks.find((n) => n.id === activeNotebookId)
+    // Safety guard: only listen to Firestore if active notebook exists in verified notebooks
+    const currentNotebook = useNotebookStore.getState().notebooks.find((n) => n.id === activeNotebookId)
     if (!currentNotebook) {
       return
     }
 
     setSyncStatus('syncing')
+    let retryTimer: ReturnType<typeof setTimeout> | null = null
 
     // Classifications
     const classRef = collection(db, 'classifications')
@@ -155,7 +164,7 @@ export function useSync() {
         snapshot.forEach((d) => items.push(d.data() as Classification))
         if (items.length > 0) {
           syncNotebookClassifications(activeNotebookId, items)
-        } else {
+        } else if (!snapshot.metadata.fromCache) {
           await ensureNotebookMetadata(activeNotebookId)
         }
       },
@@ -172,7 +181,7 @@ export function useSync() {
         snapshot.forEach((d) => items.push(d.data() as Category))
         if (items.length > 0) {
           syncNotebookCategories(activeNotebookId, items)
-        } else {
+        } else if (!snapshot.metadata.fromCache) {
           await ensureNotebookMetadata(activeNotebookId)
         }
       },
@@ -194,23 +203,31 @@ export function useSync() {
       },
       (e) => {
         console.warn('Transactions sync error:', e)
-        setSyncStatus('offline')
+        if (!navigator.onLine) {
+          setSyncStatus('offline')
+        } else {
+          setSyncStatus('syncing')
+          retryTimer = setTimeout(() => {
+            if (navigator.onLine) setRetryTrigger((c) => c + 1)
+          }, 3000)
+        }
       }
     )
 
     return () => {
+      if (retryTimer) clearTimeout(retryTimer)
       unsubClass()
       unsubCat()
       unsubTx()
     }
   }, [
-    user,
-    notebooks,
+    user?.id,
     activeNotebookId,
     syncNotebookClassifications,
     syncNotebookCategories,
     ensureNotebookMetadata,
     setTransactions,
     setSyncStatus,
+    retryTrigger,
   ])
 }

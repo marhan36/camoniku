@@ -24,15 +24,17 @@ interface AuthState {
   initAuth: () => Promise<void>
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
-  user: null,
-  isLoading: true,
-  isInitialized: false,
+export const useAuthStore = create<AuthState>((set, get) => {
+  const initialUser = localDB.getUser()
+  return {
+    user: initialUser,
+    isLoading: !initialUser,
+    isInitialized: !!initialUser,
 
-  setUser: (user) => {
-    localDB.setUser(user)
-    set({ user })
-  },
+    setUser: (user) => {
+      localDB.setUser(user)
+      set({ user })
+    },
 
   continueAsGuest: (name: string) => {
     const now = new Date().toISOString()
@@ -271,7 +273,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     return new Promise<void>((resolve) => {
       onAuthStateChanged(auth, async (fbUser) => {
         if (fbUser) {
-          // Firebase authenticated user
+          const currentUser = get().user
+          // If we already have the matching user loaded from local cache, unblock UI immediately
+          if (currentUser && currentUser.id === fbUser.uid) {
+            set({ isLoading: false, isInitialized: true })
+            resolve()
+            // Sync with Firestore doc in background to catch any remote changes
+            const userDocRef = doc(db, 'users', fbUser.uid)
+            getDoc(userDocRef)
+              .then((userSnap) => {
+                if (userSnap.exists()) {
+                  const userData = userSnap.data() as User
+                  localDB.setUser(userData)
+                  set({ user: userData })
+                }
+              })
+              .catch((err) => console.warn('Background user doc sync warning:', err))
+            return
+          }
+
+          // Otherwise fetch/create user doc
           const userDocRef = doc(db, 'users', fbUser.uid)
           let userData: User
           try {
@@ -321,4 +342,5 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       })
     })
   },
-}))
+}
+})

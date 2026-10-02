@@ -137,11 +137,9 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
     set({ notebooks: updatedNotebooks })
 
     if (user && !user.is_anonymous) {
-      try {
-        await updateDoc(doc(db, 'notebooks', id), { ...updates, updated_at: now })
-      } catch (e) {
+      updateDoc(doc(db, 'notebooks', id), { ...updates, updated_at: now }).catch((e) => {
         console.warn('Error syncing updated notebook to Firestore:', e)
-      }
+      })
     }
 
     toast.success(i18n.t('toasts.notebook_updated'))
@@ -213,11 +211,9 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
     set({ notebooks: updatedNotebooks, activeNotebookId: newActiveId })
 
     if (user && !user.is_anonymous) {
-      try {
-        await deleteDoc(doc(db, 'notebooks', id))
-      } catch (e) {
+      deleteDoc(doc(db, 'notebooks', id)).catch((e) => {
         console.warn('Error deleting notebook from Firestore:', e)
-      }
+      })
     }
 
     toast.success(i18n.t('toasts.notebook_deleted'))

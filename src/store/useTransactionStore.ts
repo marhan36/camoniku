@@ -48,11 +48,9 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
     set({ transactions: updated })
 
     if (user && !user.is_anonymous) {
-      try {
-        await setDoc(doc(db, 'transactions', newTx.id), newTx)
-      } catch (e) {
+      setDoc(doc(db, 'transactions', newTx.id), newTx).catch((e) => {
         console.warn('Error saving transaction to Firestore:', e)
-      }
+      })
     }
 
     toast.success(i18n.t('toasts.transaction_created'))
@@ -70,11 +68,9 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
 
     const user = useAuthStore.getState().user
     if (user && !user.is_anonymous) {
-      try {
-        await updateDoc(doc(db, 'transactions', id), { ...updates, updated_at: now })
-      } catch (e) {
+      updateDoc(doc(db, 'transactions', id), { ...updates, updated_at: now }).catch((e) => {
         console.warn('Error updating transaction in Firestore:', e)
-      }
+      })
     }
 
     toast.success(i18n.t('toasts.transaction_updated'))
@@ -87,11 +83,9 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
 
     const user = useAuthStore.getState().user
     if (user && !user.is_anonymous) {
-      try {
-        await deleteDoc(doc(db, 'transactions', id))
-      } catch (e) {
+      deleteDoc(doc(db, 'transactions', id)).catch((e) => {
         console.warn('Error deleting transaction from Firestore:', e)
-      }
+      })
     }
 
     toast.success(i18n.t('toasts.transaction_deleted'))

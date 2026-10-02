@@ -21,6 +21,9 @@ import {
   Tags,
   User as UserIcon,
 } from 'lucide-react'
+import { collection, query, where, getCountFromServer } from 'firebase/firestore'
+import { db } from '@/lib/firebase/config'
+import { localDB } from '@/lib/storage/localStorage'
 import { useTranslation } from 'react-i18next'
 
 export const NotebooksPage: React.FC = () => {
@@ -36,6 +39,75 @@ export const NotebooksPage: React.FC = () => {
   const [managingMetadataNotebook, setManagingMetadataNotebook] = useState<Notebook | null>(null)
   const [deletingNotebookId, setDeletingNotebookId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  // Cached transaction count map for all notebooks
+  const [txCounts, setTxCounts] = useState<Record<string, number>>(() => {
+    try {
+      const saved = localStorage.getItem('camoniku_notebook_tx_counts')
+      return saved ? JSON.parse(saved) : {}
+    } catch {
+      return {}
+    }
+  })
+
+  // Keep active notebook's transaction count in sync with local transactions array
+  useEffect(() => {
+    if (activeNotebookId) {
+      setTxCounts((prev) => {
+        const next = { ...prev, [activeNotebookId]: transactions.length }
+        try {
+          localStorage.setItem('camoniku_notebook_tx_counts', JSON.stringify(next))
+        } catch {}
+        return next
+      })
+    }
+  }, [activeNotebookId, transactions.length])
+
+  // Fetch count for all notebooks
+  useEffect(() => {
+    if (!user || user.is_anonymous) {
+      const allLocalTx = localDB.getTransactions()
+      const counts: Record<string, number> = {}
+      notebooks.forEach((nb) => {
+        counts[nb.id] = allLocalTx.filter((t) => t.notebook_id === nb.id).length
+      })
+      setTxCounts(counts)
+      return
+    }
+
+    let isMounted = true
+    const fetchCounts = async () => {
+      const newCounts: Record<string, number> = {}
+      for (const nb of notebooks) {
+        if (nb.id === activeNotebookId) {
+          newCounts[nb.id] = transactions.length
+        } else {
+          try {
+            const q = query(collection(db, 'transactions'), where('notebook_id', '==', nb.id))
+            const countSnap = await getCountFromServer(q)
+            newCounts[nb.id] = countSnap.data().count
+          } catch {
+            newCounts[nb.id] = txCounts[nb.id] || 0
+          }
+        }
+      }
+      if (isMounted) {
+        setTxCounts((prev) => {
+          const merged = { ...prev, ...newCounts }
+          try {
+            localStorage.setItem('camoniku_notebook_tx_counts', JSON.stringify(merged))
+          } catch {}
+          return merged
+        })
+      }
+    }
+
+    fetchCounts()
+
+    return () => {
+      isMounted = false
+    }
+  }, [user?.id, notebooks, activeNotebookId, transactions.length])
 
   useEffect(() => {
     const ownerIds = notebooks.map((nb) => nb.owner_id).filter(Boolean)
@@ -98,7 +170,7 @@ export const NotebooksPage: React.FC = () => {
           {notebooks.map((nb) => {
             const isActive = nb.id === activeNotebookId
             const isOwner = isNotebookOwner(nb)
-            const txCount = transactions.filter((t) => t.notebook_id === nb.id).length
+            const txCount = nb.id === activeNotebookId ? transactions.length : (txCounts[nb.id] ?? 0)
             const memberCount = nb.member_ids?.length || 1
 
             return (

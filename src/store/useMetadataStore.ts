@@ -207,11 +207,9 @@ export const useMetadataStore = create<MetadataState>((set, get) => ({
     set({ classifications: updated })
 
     if (user && !user.is_anonymous) {
-      try {
-        await setDoc(doc(db, 'classifications', newClassification.id), newClassification)
-      } catch (e) {
+      setDoc(doc(db, 'classifications', newClassification.id), newClassification).catch((e) => {
         console.warn('Error syncing classification to Firestore:', e)
-      }
+      })
     }
 
     toast.success(i18n.t('toasts.classification_created'))
@@ -292,11 +290,9 @@ export const useMetadataStore = create<MetadataState>((set, get) => ({
     set({ categories: updated })
 
     if (user && !user.is_anonymous) {
-      try {
-        await setDoc(doc(db, 'categories', newCategory.id), newCategory)
-      } catch (e) {
+      setDoc(doc(db, 'categories', newCategory.id), newCategory).catch((e) => {
         console.warn('Error syncing category to Firestore:', e)
-      }
+      })
     }
 
     toast.success(i18n.t('toasts.category_created'))
@@ -326,11 +322,9 @@ export const useMetadataStore = create<MetadataState>((set, get) => ({
 
     const user = useAuthStore.getState().user
     if (user && !user.is_anonymous) {
-      try {
-        await updateDoc(doc(db, 'classifications', id), { name: trimmed, updated_at: now })
-      } catch (e) {
+      updateDoc(doc(db, 'classifications', id), { name: trimmed, updated_at: now }).catch((e) => {
         console.warn('Error updating classification on Firestore:', e)
-      }
+      })
     }
 
     toast.success('Classification updated')
@@ -360,11 +354,9 @@ export const useMetadataStore = create<MetadataState>((set, get) => ({
 
     const user = useAuthStore.getState().user
     if (user && !user.is_anonymous) {
-      try {
-        await updateDoc(doc(db, 'categories', id), { name: trimmed, updated_at: now })
-      } catch (e) {
+      updateDoc(doc(db, 'categories', id), { name: trimmed, updated_at: now }).catch((e) => {
         console.warn('Error updating category on Firestore:', e)
-      }
+      })
     }
 
     toast.success('Category updated')
@@ -381,11 +373,9 @@ export const useMetadataStore = create<MetadataState>((set, get) => ({
 
     const user = useAuthStore.getState().user
     if (user && !user.is_anonymous) {
-      try {
-        await updateDoc(doc(db, 'classifications', id), { is_active: false, updated_at: now })
-      } catch (e) {
+      updateDoc(doc(db, 'classifications', id), { is_active: false, updated_at: now }).catch((e) => {
         console.warn('Error marking classification inactive in Firestore:', e)
-      }
+      })
     }
     toast.success('Classification deleted')
   },
@@ -400,11 +390,9 @@ export const useMetadataStore = create<MetadataState>((set, get) => ({
 
     const user = useAuthStore.getState().user
     if (user && !user.is_anonymous) {
-      try {
-        await updateDoc(doc(db, 'categories', id), { is_active: false, updated_at: now })
-      } catch (e) {
+      updateDoc(doc(db, 'categories', id), { is_active: false, updated_at: now }).catch((e) => {
         console.warn('Error marking category inactive in Firestore:', e)
-      }
+      })
     }
     toast.success('Category deleted')
   },
